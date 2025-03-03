@@ -1,32 +1,16 @@
-//
-//  ReMeetApp.swift
-//  ReMeet
-//
-//  Created by Artush on 31/01/2025.
-//
-
 import SwiftUI
-import SwiftData
 
 @main
 struct ReMeetApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isLoggedIn {
+                MainAppView() // If logged in, load the main app
+            } else {
+                WelcomeView() // Show Welcome screen for new users
+            }
         }
-        .modelContainer(sharedModelContainer)
     }
 }
