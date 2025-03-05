@@ -1,18 +1,18 @@
 //
-//  UsernameStepView.swift
+//  LastNameStepView.swift
 //  ReMeet
 //  Updated on 05/03/2025.
 //
 
 import SwiftUI
 
-struct UsernameStepView: View {
+struct LastNameStepView: View {
     @ObservedObject var model: OnboardingModel
-    
+        
     var body: some View {
         VStack(spacing: 20) {
             // Headline question
-            Text("Choose a username")
+            Text("What's your last name?")
                 .font(.title3)
                 .foregroundColor(.white.opacity(0.8))
                 .fontWeight(.bold)
@@ -20,20 +20,17 @@ struct UsernameStepView: View {
                 .padding(.horizontal)
                 .padding(.top, 20)
             
-            // Username input
-            TextField("Username", text: $model.username)
+            // Input field
+            TextField("Last name", text: $model.lastName)
                 .font(.system(size: 32))
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .textFieldStyle(PlainTextFieldStyle())
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
-            
-            Text("This is how others will find you on ReMeet")
-                .font(.footnote)
-                .foregroundColor(.gray)
+                .onChange(of: model.lastName) { newValue in
+                    print("📝 Last name updated: '\(newValue)'")
+                }
             
             Spacer()
             
@@ -42,13 +39,11 @@ struct UsernameStepView: View {
                 Spacer()
                 CircleArrowButton(
                     action: {
-                        if model.username.count >= 3 && !model.username.contains(" ") {
-                            print("✅ Username validation passed: '\(model.username)'")
-                            // Complete onboarding
-                            UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                            print("🎉 Onboarding complete!")
+                        if !model.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            print("✅ Last name validation passed: '\(model.lastName)'")
+                            model.currentStep = .birthday
                         } else {
-                            print("❌ Username validation failed: Must be at least 3 characters with no spaces")
+                            print("❌ Last name validation failed: Last name is required")
                         }
                     },
                     backgroundColor: Color(hex: "C9155A")
@@ -59,7 +54,8 @@ struct UsernameStepView: View {
         }
     }
 }
+
 #Preview {
-    UsernameStepView(model: OnboardingModel())
+    LastNameStepView(model: OnboardingModel())
         .preferredColorScheme(.dark)
 }
