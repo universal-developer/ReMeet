@@ -2,13 +2,14 @@
 //  OnboardingContainerView.swift
 //  ReMeet
 //
-//  Updated on 05/03/2025.
+//  Updated on 06/03/2025.
 //
 
 import SwiftUI
 
 struct OnboardingContainerView: View {
     @StateObject private var model = OnboardingModel()
+    @Environment(\.presentationMode) var presentationMode
     
     // For transition animations
     @State private var currentPageOffset: CGFloat = 0
@@ -20,24 +21,29 @@ struct OnboardingContainerView: View {
             Color.black.edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
-                // Top header area with logo and progress bar
-                VStack(spacing: 6) {
-                    // App branding with higher placement like BeReal
-                    Text("ReMeet")
-                        .font(.system(size: 35, weight: .bold))
-                        .foregroundColor(Color(hex: "C9155A"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 16) // Reduced top padding to move logo higher
+                // New header design: back button + progress bar
+                HStack(spacing: 16) {
+                    // Back button
+                    Button(action: {
+                        navigateToPreviousStep()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                    }
+                    .opacity(canGoBack ? 1.0 : 0.0) // Hide on first step
                     
-                    // Progress bar directly below logo
+                    // Progress bar
                     SegmentedProgressBar(
                         totalSteps: OnboardingStep.allCases.count,
                         currentStep: model.currentStep.rawValue
                     )
                     .frame(height: 4)
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
                 
                 // Current step view with transition
                 ZStack {
@@ -82,12 +88,36 @@ struct OnboardingContainerView: View {
         }
         .preferredColorScheme(.dark)
         .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true) // Ensure the default back button doesn't appear
         .onReceive(model.$currentStep) { newStep in
             // Debug print to track step changes
             print("💫 Moving to step: \(newStep) - Progress: \(Int(model.progressPercentage * 100))%")
             
             // Smooth page transition
             performTransition()
+        }
+    }
+    
+    // Helper computed property to determine if back navigation is possible
+    private var canGoBack: Bool {
+        // Always show back button, even on first step
+        return true
+    }
+    
+    // Navigate to previous step
+    private func navigateToPreviousStep() {
+        switch model.currentStep {
+        case .firstName:
+            // Dismiss this view to go back to WelcomeView
+            presentationMode.wrappedValue.dismiss()
+        case .lastName:
+            model.currentStep = .firstName
+        case .birthday:
+            model.currentStep = .lastName
+        case .phone:
+            model.currentStep = .birthday
+        case .username:
+            model.currentStep = .phone
         }
     }
     
@@ -130,4 +160,11 @@ struct SegmentedProgressBar: View {
             }
         }
     }
+}
+
+// For preview purposes only if needed
+// OnboardingStep and progressPercentage should be defined in your main OnboardingModel class
+
+#Preview {
+    OnboardingContainerView()
 }

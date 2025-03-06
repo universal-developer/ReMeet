@@ -1,131 +1,183 @@
 //
 //  BirthdayStepView.swift
 //  ReMeet
-//  Updated on 05/03/2025.
+//  Created on 06/03/2025.
 //
 
 import SwiftUI
 
 struct BirthdayStepView: View {
     @ObservedObject var model: OnboardingModel
-    @State private var selectedDay: Int?
-    @State private var selectedMonth: Int?
-    @State private var selectedYear: Int?
+    @State private var day: String = ""
+    @State private var month: String = ""
+    @State private var year: String = ""
+    @State private var isValid: Bool = false
+    @FocusState private var focusField: Field?
     
-    // Years to show (13+ years old)
-    private let currentYear = Calendar.current.component(.year, from: Date())
-    private var years: [Int] {
-        Array((currentYear-100...currentYear-13).reversed())
-    }
-    
-    // Months of the year
-    private let months = ["January", "February", "March", "April", "May", "June",
-                         "July", "August", "September", "October", "November", "December"]
-    
-    // Days of the month
-    private var days: [Int] {
-        Array(1...31)
+    enum Field {
+        case day, month, year
     }
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Headline question
+        VStack(alignment: .center, spacing: 0) {
+            // Headline question with more padding now that header is simplified
             Text("When's your birthday?")
-                .font(.title3)
+                .font(.title2)
                 .foregroundColor(.white.opacity(0.8))
                 .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .padding(.top, 20)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
             
-            // Date picker with separate columns
+            // Birthday input fields
             HStack(spacing: 20) {
-                // Day picker
-                Picker("Day", selection: $selectedDay) {
-                    Text("Day").foregroundColor(.gray).tag(nil as Int?)
-                    ForEach(days, id: \.self) { day in
-                        Text("\(day)").tag(day as Int?)
+                // Month field
+                TextField("MM", text: $month)
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .focused($focusField, equals: .month)
+                    .onChange(of: month) { newValue in
+                        let filtered = newValue.filter { "0123456789".contains($0) }
+                        if filtered != newValue {
+                            month = filtered
+                        }
+                        
+                        if month.count == 2 {
+                            focusField = .day
+                        }
+                        
+                        if month.count > 2 {
+                            month = String(month.prefix(2))
+                        }
+                        
+                        validateBirthday()
                     }
-                }
-                .pickerStyle(WheelPickerStyle())
-                .frame(width: 70)
-                .clipped()
-                .compositingGroup()
-                .onChange(of: selectedDay) { _ in calculateAge() }
+                    .frame(width: 60)
                 
-                // Month picker
-                Picker("Month", selection: $selectedMonth) {
-                    Text("Month").foregroundColor(.gray).tag(nil as Int?)
-                    ForEach(0..<months.count, id: \.self) { index in
-                        Text(months[index]).tag(index as Int?)
-                    }
-                }
-                .pickerStyle(WheelPickerStyle())
-                .frame(width: 100)
-                .clipped()
-                .compositingGroup()
-                .onChange(of: selectedMonth) { _ in calculateAge() }
+                Text("/")
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.5))
                 
-                // Year picker
-                Picker("Year", selection: $selectedYear) {
-                    Text("Year").foregroundColor(.gray).tag(nil as Int?)
-                    ForEach(years, id: \.self) { year in
-                        Text("\(year)").tag(year as Int?)
+                // Day field
+                TextField("DD", text: $day)
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .focused($focusField, equals: .day)
+                    .onChange(of: day) { newValue in
+                        let filtered = newValue.filter { "0123456789".contains($0) }
+                        if filtered != newValue {
+                            day = filtered
+                        }
+                        
+                        if day.count == 2 {
+                            focusField = .year
+                        }
+                        
+                        if day.count > 2 {
+                            day = String(day.prefix(2))
+                        }
+                        
+                        validateBirthday()
                     }
-                }
-                .pickerStyle(WheelPickerStyle())
-                .frame(width: 80)
-                .clipped()
-                .compositingGroup()
-                .onChange(of: selectedYear) { _ in calculateAge() }
+                    .frame(width: 60)
+                
+                Text("/")
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.5))
+                
+                // Year field
+                TextField("YYYY", text: $year)
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .focused($focusField, equals: .year)
+                    .onChange(of: year) { newValue in
+                        let filtered = newValue.filter { "0123456789".contains($0) }
+                        if filtered != newValue {
+                            year = filtered
+                        }
+                        
+                        if year.count > 4 {
+                            year = String(year.prefix(4))
+                        }
+                        
+                        validateBirthday()
+                    }
+                    .frame(width: 100)
             }
-            .frame(height: 150)
-            .padding(.top, 10)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
             
             Text("Only to make sure you're old enough to use ReMeet.")
                 .font(.footnote)
                 .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
+                .padding(.top, 10)
             
             Spacer()
             
-            // Button at bottom right
+            // Bottom section with CircleArrowButton
             HStack {
                 Spacer()
+                
                 CircleArrowButton(
                     action: {
-                        if selectedDay != nil && selectedMonth != nil && selectedYear != nil {
-                            if let age = model.age, age >= 13 {
-                                print("✅ Age validation passed: \(age) years old")
-                                model.currentStep = .phone
-                            } else {
-                                print("❌ Age validation failed: Must be at least 13 years old")
-                            }
+                        if isValid {
+                            print("✅ Age validation passed: \(model.age ?? 0) years old")
+                            model.currentStep = .phone
                         } else {
                             print("❌ Age validation failed: Complete birthdate required")
                         }
                     },
-                    backgroundColor: Color(hex: "C9155A")
+                    backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
                 )
+                .disabled(!isValid)
                 .padding(.trailing, 24)
             }
             .padding(.bottom, 32)
         }
+        .background(Color.black)
+        .onAppear {
+            // Focus the month field when view appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                focusField = .month
+            }
+        }
     }
     
     // Calculate age and update model
-    private func calculateAge() {
-        guard let day = selectedDay, let month = selectedMonth, let year = selectedYear else {
+    private func validateBirthday() {
+        guard let dayInt = Int(day), let monthInt = Int(month), let yearInt = Int(year),
+              day.count == 2, month.count == 2, year.count == 4,
+              monthInt >= 1, monthInt <= 12,
+              dayInt >= 1, dayInt <= daysInMonth(month: monthInt, year: yearInt) else {
             model.age = nil
+            isValid = false
             return
         }
         
         let calendar = Calendar.current
-        let birthComponents = DateComponents(year: year, month: month + 1, day: day)
+        let birthComponents = DateComponents(year: yearInt, month: monthInt, day: dayInt)
         
         guard let birthDate = calendar.date(from: birthComponents) else {
             model.age = nil
+            isValid = false
+            return
+        }
+        
+        // Make sure date is not in the future
+        guard birthDate <= Date() else {
+            model.age = nil
+            isValid = false
             return
         }
         
@@ -133,7 +185,38 @@ struct BirthdayStepView: View {
         let ageComponents = calendar.dateComponents([.year], from: birthDate, to: now)
         model.age = ageComponents.year
         
-        print("📅 Birthdate set: \(day)/\(month+1)/\(year) - Age: \(model.age ?? 0)")
+        // Validate age (13+ years old)
+        isValid = (model.age ?? 0) >= 13
+        
+        print("📅 Birthdate set: \(dayInt)/\(monthInt)/\(yearInt) - Age: \(model.age ?? 0)")
+    }
+    
+    // Helper function to determine days in a month
+    private func daysInMonth(month: Int, year: Int) -> Int {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        
+        if let date = calendar.date(from: components),
+           let range = calendar.range(of: .day, in: .month, for: date) {
+            return range.count
+        }
+        
+        // Fallback values by month
+        switch month {
+        case 2:
+            // Check for leap year
+            if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
+                return 29
+            } else {
+                return 28
+            }
+        case 4, 6, 9, 11:
+            return 30
+        default:
+            return 31
+        }
     }
 }
 
