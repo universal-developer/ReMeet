@@ -7,23 +7,19 @@
 
 import SwiftUI
 
-struct PrimaryButton: View { // 🔥 New name
+struct PrimaryButton: View {
     var title: String
     var action: () -> Void
+    var backgroundColor: Color = Color(hex: "C9155A")
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity) 
                 .padding()
-                .background(Color(hex: "C9155A"))
+                .background(backgroundColor)
                 .foregroundColor(.white)
                 .cornerRadius(10)
-                .padding(.horizontal, 16)
         }
     }
-}
-
-#Preview {
-    PrimaryButton(title: "Continue", action: {})
 }

@@ -5,6 +5,13 @@
 //  Updated on 06/03/2025.
 //
 
+//
+//  OnboardingContainerView.swift
+//  ReMeet
+//
+//  Updated on 11/03/2025.
+//
+
 import SwiftUI
 
 struct OnboardingContainerView: View {
@@ -37,7 +44,7 @@ struct OnboardingContainerView: View {
                     // Progress bar
                     SegmentedProgressBar(
                         totalSteps: OnboardingStep.allCases.count,
-                        currentStep: model.currentStep.rawValue-1
+                        currentStep: model.currentStep.rawValue
                     )
                     .frame(height: 4)
                 }
@@ -68,6 +75,12 @@ struct OnboardingContainerView: View {
                             ))
                     case .phone:
                         PhoneStepView(model: model)
+                            .transition(AnyTransition.asymmetric(
+                                insertion: .move(edge: .trailing),
+                                removal: .move(edge: .leading)
+                            ))
+                    case .verification:
+                        PhoneVerificationStepView(model: model)
                             .transition(AnyTransition.asymmetric(
                                 insertion: .move(edge: .trailing),
                                 removal: .move(edge: .leading)
@@ -116,8 +129,10 @@ struct OnboardingContainerView: View {
             model.currentStep = .lastName
         case .phone:
             model.currentStep = .birthday
+        case .verification:
+            model.currentStep = .phone  // FIXED: Go back to phone step
         case .username:
-            model.currentStep = .phone
+            model.currentStep = .verification  // FIXED: Go back to verification step
         }
     }
     
@@ -145,10 +160,6 @@ struct OnboardingContainerView: View {
         }
     }
 }
-
-
-// For preview purposes only if needed
-// OnboardingStep and progressPercentage should be defined in your main OnboardingModel class
 
 #Preview {
     OnboardingContainerView()

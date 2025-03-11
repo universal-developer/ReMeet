@@ -5,6 +5,13 @@
 //  Updated on 05/03/2025.
 //
 
+//
+//  OnboardingModel.swift
+//  ReMeet
+//
+//  Updated on 11/03/2025.
+//
+
 import Foundation
 import Combine
 
@@ -14,6 +21,7 @@ class OnboardingModel: ObservableObject {
     @Published var lastName: String = ""
     @Published var age: Int?
     @Published var phoneNumber: String = ""
+    @Published var verificationCode: String = "" // Added for verification step
     @Published var username: String = ""
     
     // Track onboarding progress
@@ -24,6 +32,7 @@ class OnboardingModel: ObservableObject {
     @Published var isLastNameValid: Bool = false
     @Published var isAgeValid: Bool = false
     @Published var isPhoneValid: Bool = false
+    @Published var isVerificationValid: Bool = false // Added for verification step
     @Published var isUsernameValid: Bool = false
     
     // Calculate overall progress (for progress bar)
@@ -50,7 +59,11 @@ class OnboardingModel: ObservableObject {
             }
         case .phone:
             if isPhoneValid {
-                currentStep = .username
+                currentStep = .verification // Now goes to verification instead of username
+            }
+        case .verification:
+            if isVerificationValid {
+                currentStep = .username // Added to go from verification to username
             }
         case .username:
             if isUsernameValid {
@@ -79,17 +92,21 @@ class OnboardingModel: ObservableObject {
         case .phone:
             // Simple validation - would use better validation in production
             isPhoneValid = phoneNumber.count >= 10
+        case .verification:
+            // Validate that all 6 digits of the verification code are entered
+            isVerificationValid = verificationCode.count == 6 && verificationCode.allSatisfy { $0.isNumber }
         case .username:
             isUsernameValid = username.count >= 3 && !username.contains(" ")
         }
     }
 }
 
-// Define the onboarding steps - now with separate first and last name steps
+// Define the onboarding steps - now with verification step
 enum OnboardingStep: Int, CaseIterable {
     case firstName = 0
     case lastName
     case birthday
     case phone
+    case verification // Added verification step
     case username
 }

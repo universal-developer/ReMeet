@@ -6,8 +6,11 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct UsernameStepView: View {
     @ObservedObject var model: OnboardingModel
+    @State private var isValid: Bool = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -30,6 +33,11 @@ struct UsernameStepView: View {
                 .padding(.horizontal)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
+                .onChange(of: model.username) { newValue in
+                    // Username must be at least 3 characters with no spaces
+                    isValid = newValue.count >= 3 && !newValue.contains(" ")
+                    print("📝 Username updated: '\(newValue)' - Valid: \(isValid)")
+                }
             
             Text("This is how others will find you on ReMeet")
                 .font(.footnote)
@@ -37,28 +45,29 @@ struct UsernameStepView: View {
             
             Spacer()
             
-            // Button at bottom right
-            HStack {
-                Spacer()
-                CircleArrowButton(
-                    action: {
-                        if model.username.count >= 3 && !model.username.contains(" ") {
-                            print("✅ Username validation passed: '\(model.username)'")
-                            // Complete onboarding
-                            UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                            print("🎉 Onboarding complete!")
-                        } else {
-                            print("❌ Username validation failed: Must be at least 3 characters with no spaces")
-                        }
-                    },
-                    backgroundColor: Color(hex: "C9155A")
-                )
-                .padding(.trailing, 24)
-            }
+            // Full-width button at bottom
+            PrimaryButton(
+                title: "Complete",
+                action: {
+                    if isValid {
+                        print("✅ Username validation passed: '\(model.username)'")
+                        // Complete onboarding
+                        UserDefaults.standard.set(true, forKey: "isLoggedIn")
+                        print("🎉 Onboarding complete!")
+                    } else {
+                        print("❌ Username validation failed: Must be at least 3 characters with no spaces")
+                    }
+                },
+                backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
+            )
+            .frame(maxWidth: .infinity)
+            .disabled(!isValid)
+            .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
     }
 }
+
 #Preview {
     UsernameStepView(model: OnboardingModel())
         .preferredColorScheme(.dark)

@@ -8,6 +8,7 @@ import SwiftUI
 
 struct LastNameStepView: View {
     @ObservedObject var model: OnboardingModel
+    @State private var isValid: Bool = false
         
     var body: some View {
         VStack(spacing: 20) {
@@ -29,27 +30,29 @@ struct LastNameStepView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
                 .onChange(of: model.lastName) { newValue in
-                    print("📝 Last name updated: '\(newValue)'")
+                    // Update validation state
+                    isValid = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    print("📝 Last name updated: '\(newValue)' - Valid: \(isValid)")
                 }
             
             Spacer()
             
-            // Button at bottom right
-            HStack {
-                Spacer()
-                CircleArrowButton(
-                    action: {
-                        if !model.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            print("✅ Last name validation passed: '\(model.lastName)'")
-                            model.currentStep = .birthday
-                        } else {
-                            print("❌ Last name validation failed: Last name is required")
-                        }
-                    },
-                    backgroundColor: Color(hex: "C9155A")
-                )
-                .padding(.trailing, 24)
-            }
+            // Full-width button at bottom
+            PrimaryButton(
+                title: "Next",
+                action: {
+                    if isValid {
+                        print("✅ Last name validation passed: '\(model.lastName)'")
+                        model.currentStep = .birthday
+                    } else {
+                        print("❌ Last name validation failed: Last name is required")
+                    }
+                },
+                backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
+            )
+            .frame(maxWidth: .infinity)
+            .disabled(!isValid)
+            .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
     }

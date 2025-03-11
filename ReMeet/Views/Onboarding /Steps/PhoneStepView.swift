@@ -11,6 +11,7 @@ struct PhoneStepView: View {
     @ObservedObject var model: OnboardingModel
     @State private var showCountryPicker = false
     @State private var selectedCountry: Country
+    @State private var isValid: Bool = false
     
     private let countryManager = CountryManager.shared
     
@@ -72,10 +73,14 @@ struct PhoneStepView: View {
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
                     .onChange(of: model.phoneNumber) { newValue in
+                        // Format the phone number
                         model.phoneNumber = countryManager.formatPhoneNumber(
                             newValue,
                             countryCode: selectedCountry.code
                         )
+                        
+                        // Update validation state
+                        isValid = validatePhoneNumber()
                     }
             }
             .padding(.horizontal, 20)
@@ -88,40 +93,45 @@ struct PhoneStepView: View {
             
             Spacer()
             
-            // Button at bottom right
-            HStack {
-                Spacer()
-                CircleArrowButton(
-                    action: {
-                        if validatePhoneNumber() {
-                            model.currentStep = .username
-                        }
-                    },
-                    backgroundColor: Color(hex: "C9155A")
-                )
-                .padding(.trailing, 24)
-            }
+            // Full-width button at bottom
+            PrimaryButton(
+                title: "Next",
+                action: {
+                    if isValid {
+                        print("✅ Phone validation passed: '+\(selectedCountry.phoneCode) \(model.phoneNumber)'")
+                        model.currentStep = .username
+                    } else {
+                        print("❌ Phone validation failed: Invalid number format")
+                    }
+                },
+                backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
+            )
+            .frame(maxWidth: .infinity)
+            .disabled(!isValid)
+            .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
     }
     
     // Validate the phone number
     private func validatePhoneNumber() -> Bool {
+        // Only attempt validation if there's some input
+        if model.phoneNumber.isEmpty {
+            return false
+        }
+        
         let isValid = countryManager.isValidPhoneNumber(
             model.phoneNumber,
             countryCode: selectedCountry.code
         )
         
         if isValid {
-            print("✅ Phone validation passed: '+\(selectedCountry.phoneCode) \(model.phoneNumber)'")
-            return true
-        } else {
-            print("❌ Phone validation failed: Invalid number format")
-            return false
+            print("📱 Phone number validated: '+\(selectedCountry.phoneCode) \(model.phoneNumber)'")
         }
+        
+        return isValid
     }
 }
-
 #Preview {
     PhoneStepView(model: OnboardingModel())
         .preferredColorScheme(.dark)

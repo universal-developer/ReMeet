@@ -17,7 +17,7 @@ struct BirthdayStepView: View {
     enum Field {
         case day, month, year
     }
-    
+        
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
             // Headline question with more padding now that header is simplified
@@ -130,7 +130,8 @@ struct BirthdayStepView: View {
             HStack {
                 Spacer()
                 
-                CircleArrowButton(
+                PrimaryButton(
+                    title: "Next",
                     action: {
                         if isValid {
                             print("✅ Age validation passed: \(model.age ?? 0) years old")
@@ -141,8 +142,10 @@ struct BirthdayStepView: View {
                     },
                     backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
                 )
+                .frame(maxWidth: .infinity) // Make it full-width
                 .disabled(!isValid)
-                .padding(.trailing, 24)
+                .padding(.bottom, 32)
+                .padding(.horizontal, 16)
             }
             .padding(.bottom, 32)
         }
@@ -150,7 +153,7 @@ struct BirthdayStepView: View {
         .onAppear {
             // Focus the month field when view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                focusField = .month
+                focusField = .day
             }
         }
     }
