@@ -30,37 +30,6 @@ struct BirthdayStepView: View {
             
             // Birthday input fields
             HStack(spacing: 20) {
-                // Month field
-                TextField("MM", text: $month)
-                    .font(.system(size: 32))
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .keyboardType(.numberPad)
-                    .focused($focusField, equals: .month)
-                    .onChange(of: month) { newValue in
-                        let filtered = newValue.filter { "0123456789".contains($0) }
-                        if filtered != newValue {
-                            month = filtered
-                        }
-                        
-                        if month.count == 2 {
-                            focusField = .day
-                        }
-                        
-                        if month.count > 2 {
-                            month = String(month.prefix(2))
-                        }
-                        
-                        validateBirthday()
-                    }
-                    .frame(width: 60)
-                
-                Text("/")
-                    .font(.system(size: 32))
-                    .fontWeight(.bold)
-                    .foregroundColor(.white.opacity(0.5))
-                
                 // Day field
                 TextField("DD", text: $day)
                     .font(.system(size: 32))
@@ -76,11 +45,43 @@ struct BirthdayStepView: View {
                         }
                         
                         if day.count == 2 {
-                            focusField = .year
+                            focusField = .month
                         }
                         
                         if day.count > 2 {
                             day = String(day.prefix(2))
+                        }
+                        
+                        validateBirthday()
+                    }
+                    .frame(width: 60)
+                
+                
+                Text("/")
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.5))
+                
+                // Month field
+                TextField("MM", text: $month)
+                    .font(.system(size: 32))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .focused($focusField, equals: .month)
+                    .onChange(of: month) { newValue in
+                        let filtered = newValue.filter { "0123456789".contains($0) }
+                        if filtered != newValue {
+                            month = filtered
+                        }
+                        
+                        if month.count == 2 {
+                            focusField = .year
+                        }
+                        
+                        if month.count > 2 {
+                            month = String(month.prefix(2))
                         }
                         
                         validateBirthday()

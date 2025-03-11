@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4B4A527A2D805829009E5D95 /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4B4A52792D805829009E5D95 /* PhoneNumberKit */; };
+		4B4A527C2D805829009E5D95 /* PhoneNumberKit-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 4B4A527B2D805829009E5D95 /* PhoneNumberKit-Dynamic */; };
+		4B4A527E2D805829009E5D95 /* PhoneNumberKit-Static in Frameworks */ = {isa = PBXBuildFile; productRef = 4B4A527D2D805829009E5D95 /* PhoneNumberKit-Static */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		4B1363B82D4CC44E000B21B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +58,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B4A527A2D805829009E5D95 /* PhoneNumberKit in Frameworks */,
+				4B4A527C2D805829009E5D95 /* PhoneNumberKit-Dynamic in Frameworks */,
+				4B4A527E2D805829009E5D95 /* PhoneNumberKit-Static in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +121,9 @@
 			);
 			name = ReMeet;
 			packageProductDependencies = (
+				4B4A52792D805829009E5D95 /* PhoneNumberKit */,
+				4B4A527B2D805829009E5D95 /* PhoneNumberKit-Dynamic */,
+				4B4A527D2D805829009E5D95 /* PhoneNumberKit-Static */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -195,6 +207,9 @@
 			);
 			mainGroup = 4B13639C2D4CC44E000B21B0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4B4A52782D805829009E5D95 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B1363A62D4CC44E000B21B0 /* Products */;
 			projectDirPath = "";
@@ -552,6 +567,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4B4A52782D805829009E5D95 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/marmelroy/PhoneNumberKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4B4A52792D805829009E5D95 /* PhoneNumberKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B4A52782D805829009E5D95 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */;
+			productName = PhoneNumberKit;
+		};
+		4B4A527B2D805829009E5D95 /* PhoneNumberKit-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B4A52782D805829009E5D95 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */;
+			productName = "PhoneNumberKit-Dynamic";
+		};
+		4B4A527D2D805829009E5D95 /* PhoneNumberKit-Static */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B4A52782D805829009E5D95 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */;
+			productName = "PhoneNumberKit-Static";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4B13639D2D4CC44E000B21B0 /* Project object */;
 }

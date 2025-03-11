@@ -37,7 +37,7 @@ struct OnboardingContainerView: View {
                     // Progress bar
                     SegmentedProgressBar(
                         totalSteps: OnboardingStep.allCases.count,
-                        currentStep: model.currentStep.rawValue
+                        currentStep: model.currentStep.rawValue-1
                     )
                     .frame(height: 4)
                 }
@@ -146,21 +146,6 @@ struct OnboardingContainerView: View {
     }
 }
 
-// Segmented progress bar that clearly shows each step
-struct SegmentedProgressBar: View {
-    let totalSteps: Int
-    let currentStep: Int
-    
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<totalSteps, id: \.self) { step in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(step <= currentStep ? Color(hex: "C9155A") : Color.gray.opacity(0.3))
-                    .frame(height: 4)
-            }
-        }
-    }
-}
 
 // For preview purposes only if needed
 // OnboardingStep and progressPercentage should be defined in your main OnboardingModel class
