@@ -128,8 +128,6 @@ struct BirthdayStepView: View {
             
             // Bottom section with CircleArrowButton
             HStack {
-                Spacer()
-                
                 PrimaryButton(
                     title: "Next",
                     action: {
@@ -142,12 +140,11 @@ struct BirthdayStepView: View {
                     },
                     backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
                 )
-                .frame(maxWidth: .infinity) // Make it full-width
+                .frame(maxWidth: .infinity)
                 .disabled(!isValid)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 32)
-                .padding(.horizontal, 16)
             }
-            .padding(.bottom, 32)
         }
         .background(Color.black)
         .onAppear {

@@ -5,6 +5,13 @@
 //  Created by Artush on 11/03/2025.
 //
 
+//
+//  PhoneVerificationStepView.swift
+//  ReMeet
+//
+//  Created by Artush on 11/03/2025.
+//
+
 import SwiftUI
 
 struct PhoneVerificationStepView: View {
@@ -42,7 +49,7 @@ struct PhoneVerificationStepView: View {
                         .background(Color.gray.opacity(0.1))
                         .cornerRadius(8)
                         .focused($focusedField, equals: index)
-                        .onChange(of: codeDigits[index]) { newValue in
+                        .onChange(of: codeDigits[index]) { _, newValue in  // Updated syntax
                             // Keep only digits
                             let filtered = newValue.filter { "0123456789".contains($0) }
                             if filtered != newValue {
@@ -92,10 +99,10 @@ struct PhoneVerificationStepView: View {
             // Full-width button at bottom
             PrimaryButton(
                 title: "Verify",
-                action: {12
+                action: {
                     if isValid {
                         print("✅ Verification code validated: '\(model.verificationCode)'")
-                        model.currentStep = .verification
+                        model.currentStep = .username  // FIX: Changed from .verification to .username
                     } else {
                         print("❌ Verification code validation failed: Complete all 6 digits")
                     }
