@@ -7,7 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4B5F45D32D89E69200B1CE1E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5F45D22D89E69200B1CE1E /* Supabase */; };
 		4B63BAD82D80AB2900FB53D1 /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4B63BAD72D80AB2900FB53D1 /* PhoneNumberKit */; };
+		4B95D5C22D89E49B00AA1D22 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C12D89E49B00AA1D22 /* Auth */; };
+		4B95D5C42D89E49B00AA1D22 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C32D89E49B00AA1D22 /* Functions */; };
+		4B95D5C62D89E49B00AA1D22 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C52D89E49B00AA1D22 /* PostgREST */; };
+		4B95D5C82D89E49B00AA1D22 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C72D89E49B00AA1D22 /* Realtime */; };
+		4B95D5CA2D89E49B00AA1D22 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C92D89E49B00AA1D22 /* Storage */; };
+		4B95D5CC2D89E59F00AA1D22 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5CB2D89E59F00AA1D22 /* Auth */; };
+		4B95D5CE2D89E59F00AA1D22 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5CD2D89E59F00AA1D22 /* Functions */; };
+		4B95D5D02D89E59F00AA1D22 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5CF2D89E59F00AA1D22 /* PostgREST */; };
+		4B95D5D22D89E59F00AA1D22 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D12D89E59F00AA1D22 /* Realtime */; };
+		4B95D5D42D89E59F00AA1D22 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D32D89E59F00AA1D22 /* Storage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +67,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B5F45D32D89E69200B1CE1E /* Supabase in Frameworks */,
+				4B95D5CA2D89E49B00AA1D22 /* Storage in Frameworks */,
+				4B95D5C62D89E49B00AA1D22 /* PostgREST in Frameworks */,
+				4B95D5C42D89E49B00AA1D22 /* Functions in Frameworks */,
+				4B95D5C22D89E49B00AA1D22 /* Auth in Frameworks */,
+				4B95D5C82D89E49B00AA1D22 /* Realtime in Frameworks */,
 				4B63BAD82D80AB2900FB53D1 /* PhoneNumberKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -64,6 +81,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B95D5D02D89E59F00AA1D22 /* PostgREST in Frameworks */,
+				4B95D5CE2D89E59F00AA1D22 /* Functions in Frameworks */,
+				4B95D5CC2D89E59F00AA1D22 /* Auth in Frameworks */,
+				4B95D5D42D89E59F00AA1D22 /* Storage in Frameworks */,
+				4B95D5D22D89E59F00AA1D22 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +105,7 @@
 				4B1363A72D4CC44E000B21B0 /* ReMeet */,
 				4B1363BA2D4CC44E000B21B0 /* ReMeetTests */,
 				4B1363C42D4CC44E000B21B0 /* ReMeetUITests */,
+				4B5F45D12D89E69200B1CE1E /* Frameworks */,
 				4B1363A62D4CC44E000B21B0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -95,6 +118,13 @@
 				4B1363C12D4CC44E000B21B0 /* ReMeetUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		4B5F45D12D89E69200B1CE1E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,6 +148,12 @@
 			name = ReMeet;
 			packageProductDependencies = (
 				4B63BAD72D80AB2900FB53D1 /* PhoneNumberKit */,
+				4B95D5C12D89E49B00AA1D22 /* Auth */,
+				4B95D5C32D89E49B00AA1D22 /* Functions */,
+				4B95D5C52D89E49B00AA1D22 /* PostgREST */,
+				4B95D5C72D89E49B00AA1D22 /* Realtime */,
+				4B95D5C92D89E49B00AA1D22 /* Storage */,
+				4B5F45D22D89E69200B1CE1E /* Supabase */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -141,6 +177,11 @@
 			);
 			name = ReMeetTests;
 			packageProductDependencies = (
+				4B95D5CB2D89E59F00AA1D22 /* Auth */,
+				4B95D5CD2D89E59F00AA1D22 /* Functions */,
+				4B95D5CF2D89E59F00AA1D22 /* PostgREST */,
+				4B95D5D12D89E59F00AA1D22 /* Realtime */,
+				4B95D5D32D89E59F00AA1D22 /* Storage */,
 			);
 			productName = ReMeetTests;
 			productReference = 4B1363B72D4CC44E000B21B0 /* ReMeetTests.xctest */;
@@ -203,6 +244,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4B63BAD62D80AB2900FB53D1 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+				4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B1363A62D4CC44E000B21B0 /* Products */;
@@ -571,13 +613,71 @@
 				minimumVersion = 4.0.2;
 			};
 		};
+		4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		4B5F45D22D89E69200B1CE1E /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
 		4B63BAD72D80AB2900FB53D1 /* PhoneNumberKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 4B63BAD62D80AB2900FB53D1 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */;
 			productName = PhoneNumberKit;
+		};
+		4B95D5C12D89E49B00AA1D22 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		4B95D5C32D89E49B00AA1D22 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		4B95D5C52D89E49B00AA1D22 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		4B95D5C72D89E49B00AA1D22 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		4B95D5C92D89E49B00AA1D22 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		4B95D5CB2D89E59F00AA1D22 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Auth;
+		};
+		4B95D5CD2D89E59F00AA1D22 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Functions;
+		};
+		4B95D5CF2D89E59F00AA1D22 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PostgREST;
+		};
+		4B95D5D12D89E59F00AA1D22 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Realtime;
+		};
+		4B95D5D32D89E59F00AA1D22 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Storage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
