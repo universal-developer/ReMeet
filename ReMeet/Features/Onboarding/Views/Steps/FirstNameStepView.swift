@@ -49,7 +49,7 @@ struct FirstNameStepView: View {
                 action: {
                     if isValid {
                         print("✅ First name validation passed: '\(model.firstName)'")
-                        model.currentStep = .lastName
+                        model.currentStep = .birthday
                     } else {
                         print("❌ First name validation failed: First name is required")
                     }

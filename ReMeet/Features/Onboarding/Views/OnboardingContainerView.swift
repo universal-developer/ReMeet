@@ -70,23 +70,23 @@ struct OnboardingContainerView: View {
     @ViewBuilder
     private var currentStepView: some View {
         switch model.currentStep {
-        case .firstName:
-            FirstNameStepView(model: model)
-                .onNextStep { moveToNextStep() }
-        case .lastName:
-            LastNameStepView(model: model)
-                .onNextStep { moveToNextStep() }
-        case .birthday:
-            BirthdayStepView(model: model)
-                .onNextStep { moveToNextStep() }
         case .phone:
             PhoneStepView(model: model)
                 .onNextStep { moveToNextStep() }
         case .verification:
             PhoneVerificationStepView(model: model)
                 .onNextStep { moveToNextStep() }
-        case .username:
-            UsernameStepView(model: model)
+        case .firstName:
+            FirstNameStepView(model: model)
+                .onNextStep { moveToNextStep() }
+        case .birthday:
+            BirthdayStepView(model: model)
+                .onNextStep { moveToNextStep() }
+        case .photos:
+            PhotosStepView(model: model)
+                .onNextStep { moveToNextStep() }
+        case .permissions:
+            PermissionsView(model: model)
                 .onNextStep { moveToNextStep() }
         }
     }
@@ -108,19 +108,19 @@ struct OnboardingContainerView: View {
     // Navigate to previous step
     private func navigateToPreviousStep() {
         switch model.currentStep {
-        case .firstName:
-            // Dismiss this view to go back to WelcomeView
-            presentationMode.wrappedValue.dismiss()
-        case .lastName:
-            model.currentStep = .firstName
-        case .birthday:
-            model.currentStep = .lastName
         case .phone:
-            model.currentStep = .birthday
+            // Exit onboarding flow if at first step
+            presentationMode.wrappedValue.dismiss()
         case .verification:
             model.currentStep = .phone
-        case .username:
+        case .firstName:
             model.currentStep = .verification
+        case .birthday:
+            model.currentStep = .firstName
+        case .photos:
+            model.currentStep = .birthday
+        case .permissions:
+            model.currentStep = .photos
         }
     }
 }

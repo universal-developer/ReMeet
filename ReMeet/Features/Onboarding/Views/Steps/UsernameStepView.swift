@@ -4,9 +4,7 @@
 //  Updated on 05/03/2025.
 //
 
-import SwiftUI
-
-import SwiftUI
+/*import SwiftUI
 
 struct UsernameStepView: View {
     @ObservedObject var model: OnboardingModel
@@ -72,3 +70,4 @@ struct UsernameStepView: View {
     UsernameStepView(model: OnboardingModel())
         .preferredColorScheme(.dark)
 }
+*/

@@ -5,17 +5,11 @@
 //  Created by Artush on 11/03/2025.
 //
 
-//
-//  PhoneVerificationStepView.swift
-//  ReMeet
-//
-//  Created by Artush on 11/03/2025.
-//
-
 import SwiftUI
 
 struct PhoneVerificationStepView: View {
     @ObservedObject var model: OnboardingModel
+    @Environment(\.onNextStep) var onNextStep
     @State private var isValid: Bool = false
     @State private var codeDigits: [String] = Array(repeating: "", count: 6)
     @FocusState private var focusedField: Int?
@@ -102,7 +96,11 @@ struct PhoneVerificationStepView: View {
                 action: {
                     if isValid {
                         print("✅ Verification code validated: '\(model.verificationCode)'")
-                        model.currentStep = .username  // FIX: Changed from .verification to .username
+                        model.validateCurrentStep()
+                        if model.isVerificationValid {
+                            model.currentStep = .firstName  // Changed from .username to .firstName
+                            onNextStep()
+                        }
                     } else {
                         print("❌ Verification code validation failed: Complete all 6 digits")
                     }

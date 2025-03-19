@@ -6,7 +6,7 @@
 
 import SwiftUI
 
-struct LastNameStepView: View {
+/*struct LastNameStepView: View {
     @ObservedObject var model: OnboardingModel
     @State private var isValid: Bool = false
     
@@ -73,3 +73,4 @@ struct LastNameStepView: View {
     LastNameStepView(model: OnboardingModel())
         .preferredColorScheme(.dark)
 }
+*/

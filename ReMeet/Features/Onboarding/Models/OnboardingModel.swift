@@ -14,26 +14,33 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 class OnboardingModel: ObservableObject {
     // User information
     @Published var firstName: String = ""
-    @Published var lastName: String = ""
     @Published var age: Int?
     @Published var phoneNumber: String = ""
-    @Published var verificationCode: String = "" // Added for verification step
-    @Published var username: String = ""
+    @Published var verificationCode: String = ""
+    
+    // UI state
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+    @Published var nameFromAppleID: Bool = false
+    @Published var isPhoneVerificationSent: Bool = false
+    
+    // Photo collection
+    @Published var userPhotos: [UIImage] = []
+    @Published var selectedImage: UIImage?
     
     // Track onboarding progress
-    @Published var currentStep: OnboardingStep = .firstName
+    @Published var currentStep: OnboardingStep = .phone
     
     // Validation states
     @Published var isFirstNameValid: Bool = false
-    @Published var isLastNameValid: Bool = false
     @Published var isAgeValid: Bool = false
     @Published var isPhoneValid: Bool = false
-    @Published var isVerificationValid: Bool = false // Added for verification step
-    @Published var isUsernameValid: Bool = false
+    @Published var isVerificationValid: Bool = false
     
     // Calculate overall progress (for progress bar)
     var progressPercentage: Double {
@@ -45,31 +52,60 @@ class OnboardingModel: ObservableObject {
     // Move to next step if validation passes
     func moveToNextStep() {
         switch currentStep {
+        case .phone:
+            if isPhoneValid {
+                // Send verification code
+                sendVerificationCode()
+            }
+        case .verification:
+            if isVerificationValid {
+                verifyCode { success in
+                    if success {
+                        DispatchQueue.main.async {
+                            self.currentStep = .firstName
+                        }
+                    }
+                }
+            }
         case .firstName:
             if isFirstNameValid {
-                currentStep = .lastName
-            }
-        case .lastName:
-            if isLastNameValid {
                 currentStep = .birthday
             }
         case .birthday:
             if isAgeValid {
-                currentStep = .phone
+                currentStep = .photos
             }
+        case .photos:
+            // Save user profile with all collected data
+            saveUserProfile { success in
+                if success {
+                    DispatchQueue.main.async {
+                        self.currentStep = .permissions
+                    }
+                }
+            }
+        case .permissions:
+            // Final step handled in view
+            completeOnboarding()
+        }
+    }
+    
+    // Validate current step data
+    func validateCurrentStep() {
+        switch currentStep {
         case .phone:
-            if isPhoneValid {
-                currentStep = .verification // Now goes to verification instead of username
-            }
+            // Simple validation - would use better validation in production
+            isPhoneValid = phoneNumber.count >= 10
         case .verification:
-            if isVerificationValid {
-                currentStep = .username // Added to go from verification to username
-            }
-        case .username:
-            if isUsernameValid {
-                // Finish onboarding
-                completeOnboarding()
-            }
+            // Validate that all 6 digits of the verification code are entered
+            isVerificationValid = verificationCode.count == 6 && verificationCode.allSatisfy { $0.isNumber }
+        case .firstName:
+            isFirstNameValid = !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .birthday:
+            isAgeValid = age != nil && age! >= 13
+        case .photos, .permissions:
+            // No validation needed for these steps
+            break
         }
     }
     
@@ -77,36 +113,33 @@ class OnboardingModel: ObservableObject {
     private func completeOnboarding() {
         // Save user data, set user as logged in, etc.
         UserDefaults.standard.set(true, forKey: "isLoggedIn")
-        print("🎉 Onboarding complete! User: \(firstName) \(lastName), Age: \(age ?? 0), Username: \(username)")
+        print("🎉 Onboarding complete! User: \(firstName), Age: \(age ?? 0)")
     }
     
-    // Validate current step data
-    func validateCurrentStep() {
-        switch currentStep {
-        case .firstName:
-            isFirstNameValid = !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .lastName:
-            isLastNameValid = !lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .birthday:
-            isAgeValid = age != nil && age! >= 13
-        case .phone:
-            // Simple validation - would use better validation in production
-            isPhoneValid = phoneNumber.count >= 10
-        case .verification:
-            // Validate that all 6 digits of the verification code are entered
-            isVerificationValid = verificationCode.count == 6 && verificationCode.allSatisfy { $0.isNumber }
-        case .username:
-            isUsernameValid = username.count >= 3 && !username.contains(" ")
-        }
+    // Add placeholder functions for database operations
+    func sendVerificationCode() {
+        // We'll implement this for real phone verification
+        isPhoneVerificationSent = true
+        currentStep = .verification
+    }
+    
+    func verifyCode(completion: @escaping (Bool) -> Void) {
+        // We'll implement this for real verification
+        completion(true)
+    }
+    
+    func saveUserProfile(completion: @escaping (Bool) -> Void) {
+        // We'll implement database save later
+        completion(true)
     }
 }
 
-// Define the onboarding steps - now with verification step
+// Updated enum without username
 enum OnboardingStep: Int, CaseIterable {
-    case firstName = 0
-    case lastName
+    case phone = 0
+    case verification
+    case firstName
     case birthday
-    case phone
-    case verification // Added verification step
-    case username
+    case photos
+    case permissions
 }

@@ -133,7 +133,7 @@ struct BirthdayStepView: View {
                     action: {
                         if isValid {
                             print("✅ Age validation passed: \(model.age ?? 0) years old")
-                            model.currentStep = .phone
+                            model.currentStep = .photos
                         } else {
                             print("❌ Age validation failed: Complete birthdate required")
                         }
