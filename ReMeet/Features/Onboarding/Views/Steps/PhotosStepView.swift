@@ -15,6 +15,7 @@ struct PhotosStepView: View {
     @State private var showingImagePicker = false
     @State private var selectedPhotos: [UIImage] = []
     @State private var isPhotoLibraryDenied = false
+    @State private var userPhotos: [ImageItem] = []
     
     var body: some View {
         VStack(spacing: 20) {
@@ -27,7 +28,9 @@ struct PhotosStepView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
-            // Photo grid or empty state
+            ImageGrid(images: $userPhotos)
+            
+            /*// Photo grid or empty state
             if selectedPhotos.isEmpty {
                 // Empty state - tap to add photos
                 Button(action: {
@@ -97,7 +100,7 @@ struct PhotosStepView: View {
                 }
                 .frame(height: 250)
             }
-            
+            */
             Spacer()
             
             // Continue button
