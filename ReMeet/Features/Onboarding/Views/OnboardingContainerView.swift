@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingContainerView: View {
     @StateObject private var model = OnboardingModel()
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var colorScheme
     
     // Direction tracking for animation
     @State private var slideDirection: SlideDirection = .forward
@@ -22,9 +23,6 @@ struct OnboardingContainerView: View {
     
     var body: some View {
         ZStack {
-            // Background color
-            Color.black.edgesIgnoringSafeArea(.all)
-            
             VStack(spacing: 0) {
                 // New header design: back button + progress bar
                 HStack(spacing: 16) {
@@ -35,7 +33,7 @@ struct OnboardingContainerView: View {
                     }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
                             .frame(width: 40, height: 40)
                     }
                     .opacity(canGoBack ? 1.0 : 0.0) // Hide on first step
@@ -61,7 +59,6 @@ struct OnboardingContainerView: View {
                 Spacer()
             }
         }
-        .preferredColorScheme(.dark)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
     }

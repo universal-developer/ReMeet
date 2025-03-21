@@ -43,12 +43,12 @@ struct ImageGrid: View {
             let gridItems = Array(repeating: GridItem(.flexible(), spacing: 8), count: columns)
             
             LazyVGrid(columns: gridItems, spacing: 8) {
-                ForEach(images) { item in
+                ForEach(Array(images.enumerated()), id: \.element.id) { index, item in
                     ZStack(alignment: .topTrailing) {
                         Image(uiImage: item.image)
                             .resizable()
                             .scaledToFill()
-                            .frame(height: 110)
+                            .frame(minWidth: 0, maxWidth: .infinity, idealHeight: 110, maxHeight: 110)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -94,6 +94,17 @@ struct ImageGrid: View {
                         // Main label (if it's the main photo)
                         if item.isMain {
                             Text("Main")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(hex: "C9155A"))
+                                .cornerRadius(4)
+                                .padding(6)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        } else {
+                            Text("\(index + 1)")
                                 .font(.caption)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -164,7 +175,6 @@ struct ImageGrid: View {
 struct ImageGridView_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
-            Color.black.edgesIgnoringSafeArea(.all)
             ImageGrid(images: .constant([]))
         }
     }

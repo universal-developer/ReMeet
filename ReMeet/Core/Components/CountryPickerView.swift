@@ -15,8 +15,6 @@ struct CountryPickerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color.black.edgesIgnoringSafeArea(.all)
-                
                 VStack {
                     // Search bar
                     HStack {
@@ -42,14 +40,12 @@ struct CountryPickerView: View {
                                 HStack {
                                     Text(CountryManager.shared.countryFlag(country.code))
                                     Text(country.name)
-                                        .foregroundColor(.white)
                                     Spacer()
                                     Text("+" + country.phoneCode)
                                         .foregroundColor(.gray)
                                 }
                                 .padding(.vertical, 4)
                             }
-                            .listRowBackground(Color.black)
                         }
                     }
                     .listStyle(PlainListStyle())
@@ -63,7 +59,6 @@ struct CountryPickerView: View {
                 .foregroundColor(.blue)
             )
         }
-        .preferredColorScheme(.dark)
     }
     
     private var filteredCountries: [Country] {

@@ -15,13 +15,14 @@ import SwiftUI
 struct FirstNameStepView: View {
     @ObservedObject var model: OnboardingModel
     @State private var isValid: Bool = false
+    @Environment(\.colorScheme) var colorScheme
         
     var body: some View {
         VStack(spacing: 20) {
             // Headline question
             Text("Let's get started, what's your name?")
                 .font(.title3)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(colorScheme == .dark ? .white.opacity(0.8) : .black)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
@@ -31,7 +32,6 @@ struct FirstNameStepView: View {
             TextField("First name", text: $model.firstName)
                 .font(.system(size: 32))
                 .fontWeight(.bold)
-                .foregroundColor(.white)
                 .textFieldStyle(PlainTextFieldStyle())
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)

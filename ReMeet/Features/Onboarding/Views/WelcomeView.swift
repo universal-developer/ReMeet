@@ -26,7 +26,7 @@ struct WelcomeView: View {
                 Text("Scan. Connect. ReMeet.")
                     .font(.title)
                     .bold()
-                    .foregroundColor(.white)
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
                 
                 Spacer()
                 
@@ -63,7 +63,6 @@ struct WelcomeView: View {
                         .padding(.bottom, 30)
                 }
             }
-            .background(Color.black.edgesIgnoringSafeArea(.all))
             .navigationBarHidden(true)
         }
     }
@@ -77,7 +76,6 @@ struct WelcomeView: View {
         case .success(let authorization):
             // Cast to the specific credential type
             if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                // Now you can access the user identifier, full name, etc.
                 if let fullName = appleIDCredential.fullName {
                     print("User's first name: \(fullName.givenName ?? "Not provided")")
                 }

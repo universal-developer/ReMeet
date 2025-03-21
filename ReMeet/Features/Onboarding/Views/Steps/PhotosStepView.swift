@@ -21,7 +21,6 @@ struct PhotosStepView: View {
         VStack(spacing: 20) {
             Text("Add Your Photos")
                 .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.white)
             
             Text("Help others recognize you when reconnecting")
                 .foregroundColor(.gray)
@@ -186,6 +185,4 @@ struct PhotoPicker: UIViewControllerRepresentable {
 
 #Preview {
     PhotosStepView(model: OnboardingModel())
-        .preferredColorScheme(.dark)
-        .background(Color.black)
 }

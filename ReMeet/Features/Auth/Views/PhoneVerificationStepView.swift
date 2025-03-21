@@ -13,13 +13,13 @@ struct PhoneVerificationStepView: View {
     @State private var isValid: Bool = false
     @State private var codeDigits: [String] = Array(repeating: "", count: 6)
     @FocusState private var focusedField: Int?
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 20) {
             // Headline
             Text("Verify your phone number")
                 .font(.title3)
-                .foregroundColor(.white.opacity(0.8))
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
@@ -28,7 +28,6 @@ struct PhoneVerificationStepView: View {
             // Subtitle
             Text("Enter the 6-digit code we sent to\n+\(model.phoneNumber)")
                 .font(.body)
-                .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
@@ -116,7 +115,7 @@ struct PhoneVerificationStepView: View {
             // Focus the first field when the view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 focusedField = 0
-            }
+            } 
         }
     }
     

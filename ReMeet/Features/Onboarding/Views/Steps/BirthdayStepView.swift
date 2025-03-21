@@ -13,6 +13,7 @@ struct BirthdayStepView: View {
     @State private var year: String = ""
     @State private var isValid: Bool = false
     @FocusState private var focusField: Field?
+    @Environment(\.colorScheme) var colorScheme
     
     enum Field {
         case day, month, year
@@ -23,7 +24,7 @@ struct BirthdayStepView: View {
             // Headline question with more padding now that header is simplified
             Text("When's your birthday?")
                 .font(.title2)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(colorScheme == .dark ? .white.opacity(0.8) : .black)
                 .fontWeight(.bold)
                 .padding(.horizontal, 24)
                 .padding(.top, 8)
@@ -34,7 +35,6 @@ struct BirthdayStepView: View {
                 TextField("DD", text: $day)
                     .font(.system(size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .keyboardType(.numberPad)
                     .focused($focusField, equals: .day)
@@ -60,13 +60,12 @@ struct BirthdayStepView: View {
                 Text("/")
                     .font(.system(size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.5) : .black)
                 
                 // Month field
                 TextField("MM", text: $month)
                     .font(.system(size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .keyboardType(.numberPad)
                     .focused($focusField, equals: .month)
@@ -91,13 +90,12 @@ struct BirthdayStepView: View {
                 Text("/")
                     .font(.system(size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.5) : .black)
                 
                 // Year field
                 TextField("YYYY", text: $year)
                     .font(.system(size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .keyboardType(.numberPad)
                     .focused($focusField, equals: .year)
@@ -146,7 +144,6 @@ struct BirthdayStepView: View {
                 .padding(.bottom, 32)
             }
         }
-        .background(Color.black)
         .onAppear {
             // Focus the month field when view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -223,5 +220,4 @@ struct BirthdayStepView: View {
 
 #Preview {
     BirthdayStepView(model: OnboardingModel())
-        .preferredColorScheme(.dark)
 }

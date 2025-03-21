@@ -16,6 +16,8 @@ struct PhoneStepView: View {
     @State private var showingDetectedRegion: Bool = true
     @State private var placeholderExample: String = ""
     
+    @Environment(\.colorScheme) var colorScheme
+    
     private let countryManager = CountryManager.shared
     
     // Initialize with device region detection
@@ -104,7 +106,6 @@ struct PhoneStepView: View {
             // Headline question
             Text("What's your phone number?")
                 .font(.title3)
-                .foregroundColor(.white.opacity(0.8))
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
@@ -121,7 +122,7 @@ struct PhoneStepView: View {
                             .font(.system(size: 18))
                         
                         Text("+" + selectedCountry.phoneCode)
-                            .foregroundColor(.white)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
                             .font(.system(size: 18, weight: .medium))
                         
                         Image(systemName: "chevron.down")
@@ -151,7 +152,6 @@ struct PhoneStepView: View {
                 TextField("", text: $localPhoneNumber)
                     .font(.system(size: 18))
                     .keyboardType(.numberPad)
-                    .foregroundColor(.white)
                     .placeholder(when: localPhoneNumber.isEmpty) {
                         Text(placeholderExample)
                             .foregroundColor(.gray.opacity(0.6))
@@ -375,5 +375,4 @@ extension View {
 
 #Preview {
     PhoneStepView(model: OnboardingModel())
-        .preferredColorScheme(.dark)
 }
