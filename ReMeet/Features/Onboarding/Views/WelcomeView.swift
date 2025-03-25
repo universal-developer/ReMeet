@@ -12,17 +12,17 @@ struct WelcomeView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @Environment(\.colorScheme) var colorScheme
     
+    @State private var path: [OnboardingRoute] = []
+    
     var body: some View {
-        NavigationView {
-            VStack {    
+        NavigationStack(path: $path) {
+            VStack {
                 Spacer()
-
-                // App Logo
+                
                 Text("ReMeet")
                     .font(.system(size: 54, weight: .bold))
-                    .bold()
                     .foregroundColor(Color(hex: "C9155A"))
-
+                
                 Text("Scan. Connect. ReMeet.")
                     .font(.title)
                     .bold()
@@ -30,7 +30,6 @@ struct WelcomeView: View {
                 
                 Spacer()
                 
-                // Apple Sign In Button (adjusted)
                 SignInWithAppleButton(
                     onRequest: configureAppleSignIn,
                     onCompletion: handleAppleSignIn
@@ -40,27 +39,38 @@ struct WelcomeView: View {
                 .frame(maxWidth: .infinity)
                 .cornerRadius(10)
                 .padding(.horizontal, 16)
-
-                // Custom Continue Button (adjusted to match)
-                NavigationLink(destination: OnboardingContainerView()) {
+                
+                // Continue button triggers route-based navigation
+                Button {
+                    path.append(.onboarding)
+                } label: {
                     Text("Continue")
-                        .font(.system(size: 17, weight: .semibold)) // Match Apple's font size
+                        .font(.system(size: 17, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 55) // Same height as Apple button
+                        .frame(height: 55)
                         .background(Color(hex: "C9155A"))
                         .foregroundColor(.white)
                         .cornerRadius(10)
                         .padding(.horizontal, 16)
                 }
-                .padding(.vertical, 4) // Space between buttons
+                .padding(.vertical, 4)
                 
-                // Scan QR Button (Guest Mode)
-                NavigationLink(destination: QRScannerView()) {
+                Button {
+                    path.append(.qrScan)
+                } label: {
                     Text("Want to connect with someone? Just scan")
                         .font(.footnote)
                         .foregroundColor(.gray)
                         .underline()
                         .padding(.bottom, 30)
+                }
+            }
+            .navigationDestination(for: OnboardingRoute.self) { route in
+                switch route {
+                case .onboarding:
+                    OnboardingContainerView()
+                case .qrScan:
+                    QRScannerView()
                 }
             }
             .navigationBarHidden(true)
@@ -74,19 +84,21 @@ struct WelcomeView: View {
     func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .success(let authorization):
-            // Cast to the specific credential type
-            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                if let fullName = appleIDCredential.fullName {
-                    print("User's first name: \(fullName.givenName ?? "Not provided")")
-                }
-                
-                // For now, just print success
-                print("Successfully authenticated with Apple")
+            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+               let fullName = appleIDCredential.fullName {
+                print("User's first name: \(fullName.givenName ?? "Not provided")")
             }
+            print("✅ Successfully authenticated with Apple")
         case .failure(let error):
-            print("Authentication failed: \(error.localizedDescription)")
+            print("❌ Authentication failed: \(error.localizedDescription)")
         }
     }
+}
+
+// Routing enum
+enum OnboardingRoute: Hashable {
+    case onboarding
+    case qrScan
 }
 
 #Preview {

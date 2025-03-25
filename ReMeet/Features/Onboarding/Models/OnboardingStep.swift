@@ -41,6 +41,11 @@ enum OnboardingStep: Int, CaseIterable {
             }
         case .permissions:
             model.completeOnboarding()
+                        
+            print("📱 Phone: \(model.phoneNumber)")
+            print("👤 First Name: \(model.firstName)")
+            print("🎂 Age: \(model.age ?? -1)")
+            print("📷 Photos selected: \(model.userPhotos.count)")
         }
     }
 }

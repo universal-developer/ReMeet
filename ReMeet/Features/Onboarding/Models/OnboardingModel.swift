@@ -29,7 +29,7 @@ class OnboardingModel: ObservableObject {
     }
 
     var canGoBack: Bool {
-        currentStep != .phone
+        true
     }
 
     func moveToNextStep() {
