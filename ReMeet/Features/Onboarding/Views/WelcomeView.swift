@@ -14,7 +14,7 @@ struct WelcomeView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack {    
                 Spacer()
 
                 // App Logo

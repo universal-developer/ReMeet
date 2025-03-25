@@ -9,9 +9,7 @@ import SwiftUI
 import CoreLocation
 
 struct PermissionsView: View {
-    @ObservedObject var model: OnboardingModel
-    @Environment(\.onNextStep) var onNextStep
-    
+    @ObservedObject var model: OnboardingModel  
     @State private var permissionStage: PermissionStage = .location
     @StateObject private var locationManager = LocationPermissionManager()
     
@@ -128,7 +126,7 @@ struct PermissionsView: View {
     private func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: "isLoggedIn")
         // Close the onboarding and go to main app
-        onNextStep()
+        model.moveToNextStep()
     }
 }
 

@@ -10,7 +10,6 @@ import PhotosUI
 
 struct PhotosStepView: View {
     @ObservedObject var model: OnboardingModel
-    @Environment(\.onNextStep) var onNextStep
     
     @State private var showingImagePicker = false
     @State private var selectedPhotos: [UIImage] = []
@@ -107,7 +106,7 @@ struct PhotosStepView: View {
                 // Save selected photos to model
                 model.userPhotos = selectedPhotos
                 model.currentStep = .permissions
-                onNextStep()
+                model.moveToNextStep()
             }) {
                 Text(selectedPhotos.isEmpty ? "Skip" : "Continue")
                     .frame(maxWidth: .infinity)

@@ -9,29 +9,28 @@ import SwiftUI
 
 struct PhoneVerificationStepView: View {
     @ObservedObject var model: OnboardingModel
-    @Environment(\.onNextStep) var onNextStep
-    @State private var isValid: Bool = false
     @State private var codeDigits: [String] = Array(repeating: "", count: 6)
     @FocusState private var focusedField: Int?
     @Environment(\.colorScheme) var colorScheme
-    
+
+    var isValid: Bool {
+        model.currentStep.validate(model: model)
+    }
+
     var body: some View {
         VStack(spacing: 20) {
-            // Headline
             Text("Verify your phone number")
                 .font(.title3)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
                 .padding(.top, 20)
-            
-            // Subtitle
+
             Text("Enter the 6-digit code we sent to\n+\(model.phoneNumber)")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            
-            // Code input fields
+
             HStack(spacing: 10) {
                 ForEach(0..<6, id: \.self) { index in
                     TextField("", text: $codeDigits[index])
@@ -42,66 +41,48 @@ struct PhoneVerificationStepView: View {
                         .background(Color.gray.opacity(0.1))
                         .cornerRadius(8)
                         .focused($focusedField, equals: index)
-                        .onChange(of: codeDigits[index]) { _, newValue in  // Updated syntax
-                            // Keep only digits
-                            let filtered = newValue.filter { "0123456789".contains($0) }
+                        .onChange(of: codeDigits[index]) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
                             if filtered != newValue {
                                 codeDigits[index] = filtered
                             }
-                            
-                            // Auto advance to next field
-                            if !newValue.isEmpty && index < 5 {
+
+                            if !filtered.isEmpty && index < 5 {
                                 focusedField = index + 1
                             }
-                            
-                            // Handle paste with multiple digits
-                            if newValue.count > 1 {
-                                let digits = Array(newValue)
+
+                            if filtered.count > 1 {
+                                let digits = Array(filtered)
                                 codeDigits[index] = String(digits[0])
-                                
-                                // Distribute remaining digits
                                 for i in 1..<min(digits.count, 6 - index) {
                                     codeDigits[index + i] = String(digits[i])
                                 }
-                                
-                                // Focus last field or appropriate field
-                                let nextIndex = min(index + digits.count, 5)
-                                focusedField = nextIndex
+                                focusedField = min(index + digits.count, 5)
                             }
-                            
-                            // Update complete code
+
                             updateVerificationCode()
                         }
                 }
             }
             .padding(.top, 20)
-            
-            // Resend code button
+
             Button(action: {
-                // Here you would implement resending the code
                 print("Resending verification code...")
+                // You can hook up resend logic here
             }) {
                 Text("Didn't receive a code? Resend")
                     .font(.footnote)
                     .foregroundColor(Color(hex: "C9155A"))
                     .padding(.top, 20)
             }
-            
+
             Spacer()
-            
-            // Full-width button at bottom
+
             PrimaryButton(
                 title: "Verify",
                 action: {
                     if isValid {
-                        print("✅ Verification code validated: '\(model.verificationCode)'")
-                        model.validateCurrentStep()
-                        if model.isVerificationValid {
-                            model.currentStep = .firstName  // Changed from .username to .firstName
-                            onNextStep()
-                        }
-                    } else {
-                        print("❌ Verification code validation failed: Complete all 6 digits")
+                        model.moveToNextStep()
                     }
                 },
                 backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
@@ -112,25 +93,18 @@ struct PhoneVerificationStepView: View {
             .padding(.bottom, 32)
         }
         .onAppear {
-            // Focus the first field when the view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 focusedField = 0
-            } 
+            }
         }
     }
-    
-    // Update the complete verification code in the model
+
     private func updateVerificationCode() {
         model.verificationCode = codeDigits.joined()
-        
-        // Update validation state
-        isValid = codeDigits.allSatisfy { !$0.isEmpty }
-        
-        print("📝 Verification code updated: '\(model.verificationCode)' - Valid: \(isValid)")
+        print("📝 Code updated: \(model.verificationCode)")
     }
 }
 
 #Preview {
     PhoneVerificationStepView(model: OnboardingModel())
-        .preferredColorScheme(.dark)
 }
