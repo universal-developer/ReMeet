@@ -26,17 +26,17 @@ struct PermissionsView: View {
             // Icon at the top
             ZStack {
                 Circle()
-                    .fill(Color(hex: "F5CA5A").opacity(0.2))
+                    .fill(Color(hex: "C9145B").opacity(0.2))
                     .frame(width: 70, height: 70)
                 
                 if permissionStage == .location {
                     Image(systemName: "location.fill")
                         .font(.system(size: 36))
-                        .foregroundColor(Color(hex: "F5CA5A"))
+                        .foregroundColor(Color(hex: "C9145B"))
                 } else {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 36))
-                        .foregroundColor(Color(hex: "F5CA5A"))
+                        .foregroundColor(Color(hex: "C9145B"))
                 }
             }
             
@@ -148,4 +148,8 @@ class LocationPermissionManager: NSObject, ObservableObject, CLLocationManagerDe
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
     }
+}
+
+#Preview {
+    PermissionsView(model: OnboardingModel())
 }

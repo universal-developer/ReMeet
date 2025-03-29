@@ -6,7 +6,7 @@
 //
 
 enum OnboardingStep: Int, CaseIterable {
-    case phone, verification, firstName, birthday, photos, permissions
+    case phone, verification, firstName, birthday, photos, permissions, personalisation
 
     func validate(model: OnboardingModel) -> Bool {
         switch self {
@@ -15,6 +15,8 @@ enum OnboardingStep: Int, CaseIterable {
         case .verification:
             return model.verificationCode.count == 6 &&
                    model.verificationCode.allSatisfy { $0.isNumber }
+        case .personalisation:
+            return true
         case .firstName:
             return !model.firstName.trimmingCharacters(in: .whitespaces).isEmpty
         case .birthday:
@@ -33,6 +35,8 @@ enum OnboardingStep: Int, CaseIterable {
             model.verifyCode { success in
                 if success { model.advanceStep() }
             }
+        case .personalisation:
+            model.advanceStep()
         case .firstName, .birthday:
             model.advanceStep()
         case .photos:

@@ -2,7 +2,7 @@
 //  OnboardingContainerView.swift
 //  ReMeet
 //
-//  Updated on 12/03/2025.
+//  Created by Artush on 29/03/2025.
 //
 
 import SwiftUI
@@ -45,12 +45,30 @@ struct OnboardingContainerView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 20)
 
-                // Animated step transition
-                currentStepView
-                    .transition(slideDirection == .forward ?
-                                .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)) :
-                                .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
-                    .animation(.easeInOut(duration: 0.3), value: model.currentStep)
+                // Slide transition container
+                Group {
+                    switch model.currentStep {
+                    case .phone:
+                        AnyView(PhoneStepView(model: model))
+                    case .verification:
+                        AnyView(PhoneVerificationStepView(model: model))
+                    case .personalisation:
+                        AnyView(PersonalisationStepView(model: model))
+                    case .firstName:
+                        AnyView(FirstNameStepView(model: model))
+                    case .birthday:
+                        AnyView(BirthdayStepView(model: model))
+                    case .photos:
+                        AnyView(PhotosStepView(model: model))
+                    case .permissions:
+                        AnyView(PermissionsView(model: model))
+                    }
+                }
+                .id(model.currentStep)
+                .transition(slideDirection == .forward ?
+                            .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)) :
+                            .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+                .animation(.easeInOut(duration: 0.3), value: model.currentStep)
 
                 Spacer()
             }
@@ -58,26 +76,7 @@ struct OnboardingContainerView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
     }
-
-    @ViewBuilder
-    private var currentStepView: some View {
-        switch model.currentStep {
-        case .phone:
-            PhoneStepView(model: model)
-        case .verification:
-            PhoneVerificationStepView(model: model)
-        case .firstName:
-            FirstNameStepView(model: model)
-        case .birthday:
-            BirthdayStepView(model: model)
-        case .photos:
-            PhotosStepView(model: model)
-        case .permissions:
-            PermissionsView(model: model)
-        }
-    }
 }
-
 
 #Preview {
     OnboardingContainerView()
