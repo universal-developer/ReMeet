@@ -6,7 +6,7 @@
 //
 
 enum OnboardingStep: Int, CaseIterable {
-    case phone, verification, firstName, birthday, photos, permissions, personalisation
+    case phone, verification, personalisation, firstName, birthday, photos, permissions
 
     func validate(model: OnboardingModel) -> Bool {
         switch self {

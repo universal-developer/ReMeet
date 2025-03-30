@@ -10,9 +10,14 @@ import Combine
 class OnboardingModel: ObservableObject {
     // MARK: - User Data
     @Published var phoneNumber: String = ""
+    @Published var selectedCountryCode: String = ""
     @Published var verificationCode: String = ""
     @Published var firstName: String = ""
     @Published var age: Int?
+    @Published var birthDay: String = ""
+    @Published var birthMonth: String = ""
+    @Published var birthYear: String = ""
+
 
     @Published var userPhotos: [UIImage] = []
     @Published var selectedImage: UIImage?
@@ -85,4 +90,18 @@ class OnboardingModel: ObservableObject {
         isPhoneVerificationSent = false
         currentStep = .phone
     }
+    
+    // Define which steps count toward progress bar
+    private var progressSteps: [OnboardingStep] {
+        [.firstName, .birthday, .photos, .permissions]
+    }
+
+    var progressStepIndex: Int {
+        progressSteps.firstIndex(of: currentStep) ?? 0
+    }
+
+    var totalProgressSteps: Int {
+        progressSteps.count
+    }
+
 }

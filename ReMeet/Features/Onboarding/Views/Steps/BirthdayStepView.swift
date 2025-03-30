@@ -95,6 +95,10 @@ struct BirthdayStepView: View {
             .padding(.bottom, 32)
         }
         .onAppear {
+            day = model.birthDay
+            month = model.birthMonth
+            year = model.birthYear
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 focusField = .day
             }
@@ -102,6 +106,12 @@ struct BirthdayStepView: View {
     }
 
     private func handleChange(for field: Field) {
+        
+        model.birthDay = day
+        model.birthMonth = month
+        model.birthYear = year
+
+        
         switch field {
         case .day:
             day = day.filter { $0.isNumber }.prefix(2).description

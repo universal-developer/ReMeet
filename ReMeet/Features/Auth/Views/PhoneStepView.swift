@@ -31,7 +31,11 @@ struct PhoneStepView: View {
             // Try to determine country from existing number
             let defaultCountry = CountryManager.shared.country(for: "US") ??
                 Country(code: "US", name: "United States", phoneCode: "1")
-            _selectedCountry = State(initialValue: defaultCountry)
+            if let savedCountry = CountryManager.shared.country(for: model.selectedCountryCode) {
+                _selectedCountry = State(initialValue: savedCountry)
+            } else {
+                _selectedCountry = State(initialValue: defaultCountry)
+            }
             _showingDetectedRegion = State(initialValue: false)
         } else {
             // Detect the user's country based on device settings and SIM card
@@ -92,7 +96,7 @@ struct PhoneStepView: View {
         }
         
         // Method 2: Use device locale settings
-        if let regionCode = Locale.current.regionCode {
+      if let regionCode = Locale.current.region?.identifier {
             print("📱 Detected country from locale: \(regionCode)")
             return regionCode
         }
@@ -137,14 +141,10 @@ struct PhoneStepView: View {
                 .sheet(isPresented: $showCountryPicker) {
                     CountryPickerView(selectedCountry: $selectedCountry)
                         .onDisappear {
-                            // Update placeholder when country changes
                             placeholderExample = getPlaceholderForCountry(code: selectedCountry.code)
-                            
-                            // Re-format number when country changes
                             formatPhoneNumber()
-                            
-                            // Hide the detected region message if user manually changes country
                             showingDetectedRegion = false
+                            model.selectedCountryCode = selectedCountry.code  // ✅ Save selection
                         }
                 }
                 

@@ -40,17 +40,15 @@ struct PersonalisationStepView: View {
             
             Spacer()
             
-            Button(action: {
-                model.moveToNextStep()
-            }) {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(hex: "C9155A"))
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .padding(.horizontal, 16)
-            }
+            PrimaryButton(
+                title: "Next",
+                action: {
+                    model.moveToNextStep()
+                }
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
         }
     }
 }
