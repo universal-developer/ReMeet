@@ -5,21 +5,16 @@
 //  Created by Artush on 14/03/2025.
 //
 
-import Foundation
 import Supabase
+import Foundation
 
 class SupabaseManager {
     static let shared = SupabaseManager()
-    
+
     let client: SupabaseClient
-    
+
     private init() {
-        let supabaseURL = URL(string: "https://qquleedmyqrpznddhsbv.supabase.co")!
-        let supabaseKey = "https://qquleedmyqrpznddhsbv.supabase.co"
-        
-        client = SupabaseClient(
-            supabaseURL: supabaseURL,
-            supabaseKey: supabaseKey
-        )
+        let url = URL(string: Secrets.supabaseURL)!
+        client = SupabaseClient(supabaseURL: url, supabaseKey: Secrets.supabaseKey)
     }
 }

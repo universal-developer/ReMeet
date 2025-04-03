@@ -95,6 +95,7 @@ GoogleService-Info.plist
 # Environment variables
 .env*
 !.env.example
+Secrets.plist
 
 # SwiftUI previews
 *.xcuserstate

@@ -73,8 +73,8 @@ struct OnboardingContainerView: View {
                           BirthdayStepView(model: model)
                       case .photos:
                           PhotosStepView(model: model)
-                      case .permissions:
-                          PermissionsView(model: model)
+                      /*case .permissions:
+                          PermissionsView(model: model)*/
                       }
                 }
                 .id(model.currentStep)

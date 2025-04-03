@@ -6,7 +6,7 @@
 //
 
 enum OnboardingStep: Int, CaseIterable {
-    case phone, verification, personalisation, firstName, birthday, photos, permissions
+    case phone, verification, personalisation, firstName, birthday, photos
 
     func validate(model: OnboardingModel) -> Bool {
         switch self {
@@ -21,7 +21,7 @@ enum OnboardingStep: Int, CaseIterable {
             return !model.firstName.trimmingCharacters(in: .whitespaces).isEmpty
         case .birthday:
             return model.age != nil && model.age! >= 13
-        case .photos, .permissions:
+        case .photos :
             return true
         }
     }
@@ -42,14 +42,19 @@ enum OnboardingStep: Int, CaseIterable {
         case .photos:
             model.saveUserProfile { success in
                 if success { model.advanceStep() }
+                else {
+                    model.errorMessage = "Couldn't save your profile. Please try again."
+                }
             }
-        case .permissions:
+            
+            model.completeOnboarding()
+        /*case .permissions:
             model.completeOnboarding()
                         
             print("📱 Phone: \(model.phoneNumber)")
             print("👤 First Name: \(model.firstName)")
             print("🎂 Age: \(model.age ?? -1)")
-            print("📷 Photos selected: \(model.userPhotos.count)")
+            print("📷 Photos selected: \(model.userPhotos.count)")*/
         }
     }
 }

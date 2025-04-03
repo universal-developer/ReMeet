@@ -27,7 +27,18 @@ class OnboardingModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var currentStep: OnboardingStep = .phone
-
+    
+    struct Instrument: Encodable {
+        let id: Int
+        let firstName: String
+        let age: Int
+        let birthDay: String
+        let birthMonth: String
+        let birthYear: String
+        let phoneNumber: String
+        let selectedCountryCode: String
+    }
+    
     // MARK: - Navigation
     var progressPercentage: Double {
         Double(currentStep.rawValue + 1) / Double(OnboardingStep.allCases.count)
@@ -67,12 +78,43 @@ class OnboardingModel: ObservableObject {
 
     func verifyCode(completion: @escaping (Bool) -> Void) {
         // Real verification here later
+        
         completion(true)
     }
 
     func saveUserProfile(completion: @escaping (Bool) -> Void) {
-        // Save to DB / API
-        completion(true)
+        guard let age = age else {
+            print("🚫 Age is missing, cannot save user.")
+            completion(false)
+            return
+        }
+
+        let user = Instrument(
+            id: Int(Date().timeIntervalSince1970), // just a quick unique-ish ID
+            firstName: firstName,
+            age: age,
+            birthDay: birthDay,
+            birthMonth: birthMonth,
+            birthYear: birthYear,
+            phoneNumber: phoneNumber,
+            selectedCountryCode: selectedCountryCode
+        )
+
+        Task {
+            do {
+                try await SupabaseManager.shared.client
+                    .database
+                    .from("users")
+                    .insert(user)
+                    .execute()
+                
+                print("✅ User saved to Supabase.")
+                completion(true)
+            } catch {
+                print("❌ Failed to save user: \(error.localizedDescription)")
+                completion(false)
+            }
+        }
     }
 
     func completeOnboarding() {
@@ -93,7 +135,7 @@ class OnboardingModel: ObservableObject {
     
     // Define which steps count toward progress bar
     private var progressSteps: [OnboardingStep] {
-        [.firstName, .birthday, .photos, .permissions]
+        [.firstName, .birthday, .photos]
     }
 
     var progressStepIndex: Int {

@@ -140,6 +140,7 @@ struct PhoneStepView: View {
                 }
                 .sheet(isPresented: $showCountryPicker) {
                     CountryPickerView(selectedCountry: $selectedCountry)
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
                         .onDisappear {
                             placeholderExample = getPlaceholderForCountry(code: selectedCountry.code)
                             formatPhoneNumber()
