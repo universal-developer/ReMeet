@@ -4,8 +4,10 @@
 //
 //  Updated on 05/03/2025.
 //
+
 import SwiftUI
 import Combine
+import Storage
 
 class OnboardingModel: ObservableObject {
     // MARK: - User Data
@@ -13,12 +15,12 @@ class OnboardingModel: ObservableObject {
     @Published var selectedCountryCode: String = ""
     @Published var verificationCode: String = ""
     @Published var firstName: String = ""
+    @Published var lastName: String = ""
+    @Published var username: String = ""
     @Published var age: Int?
     @Published var birthDay: String = ""
     @Published var birthMonth: String = ""
     @Published var birthYear: String = ""
-
-
     @Published var userPhotos: [UIImage] = []
     @Published var selectedImage: UIImage?
 
@@ -27,18 +29,33 @@ class OnboardingModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var currentStep: OnboardingStep = .phone
-    
+
     struct Instrument: Encodable {
-        let id: Int
+        let id: String
         let firstName: String
+        let lastName: String
+        let username: String
         let age: Int
         let birthDay: String
         let birthMonth: String
         let birthYear: String
         let phoneNumber: String
         let selectedCountryCode: String
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case firstName = "first_name"
+            case lastName = "last_name"
+            case username = "username"
+            case age
+            case birthDay = "birth_day"
+            case birthMonth = "birth_month"
+            case birthYear = "birth_year"
+            case phoneNumber = "phone_number"
+            case selectedCountryCode = "selected_country_code"
+        }
     }
-    
+
     // MARK: - Navigation
     var progressPercentage: Double {
         Double(currentStep.rawValue + 1) / Double(OnboardingStep.allCases.count)
@@ -71,27 +88,76 @@ class OnboardingModel: ObservableObject {
     }
 
     func sendVerificationCode() {
-        // Real implementation here later
-        isPhoneVerificationSent = true
-        print("📲 Verification code sent!")
+        // Strip leading zero if it exists
+        var trimmedPhone = phoneNumber
+        if trimmedPhone.hasPrefix("0") {
+            trimmedPhone.removeFirst()
+        }
+
+        let fullPhoneNumber = "+\(selectedCountryCode)\(trimmedPhone)"
+        print("📤 Sending OTP to: \(fullPhoneNumber)")
+        
+        isLoading = true
+        Task {
+            do {
+                try await SupabaseManager.shared.client.auth.signInWithOTP(phone: fullPhoneNumber)
+                DispatchQueue.main.async {
+                    self.isPhoneVerificationSent = true
+                    self.isLoading = false
+                    print("✅ OTP sent")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.errorMessage = "Failed to send code. Check your number."
+                    print("❌ Error sending OTP: \(error)")
+                }
+            }
+        }
     }
+
+
 
     func verifyCode(completion: @escaping (Bool) -> Void) {
-        // Real verification here later
-        
-        completion(true)
+        var trimmedPhone = phoneNumber
+        if trimmedPhone.hasPrefix("0") {
+            trimmedPhone.removeFirst()
+        }
+        let fullPhoneNumber = "+\(selectedCountryCode)\(trimmedPhone)"
+        isLoading = true
+        Task {
+            do {
+                try await SupabaseManager.shared.client.auth.verifyOTP(phone: fullPhoneNumber, token: verificationCode, type: .sms)
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    print("✅ Phone verified via Supabase")
+                    completion(true)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.errorMessage = "Invalid code. Please try again."
+                    print("❌ OTP verification failed: \(error)")
+                    completion(false)
+                }
+            }
+        }
     }
 
+
     func saveUserProfile(completion: @escaping (Bool) -> Void) {
-        guard let age = age else {
-            print("🚫 Age is missing, cannot save user.")
+        guard let age = age,
+              let userId = SupabaseManager.shared.client.auth.currentUser?.id.uuidString else {
+            print("🚫 Missing data, cannot save user.")
             completion(false)
             return
         }
 
         let user = Instrument(
-            id: Int(Date().timeIntervalSince1970), // just a quick unique-ish ID
+            id: userId,
             firstName: firstName,
+            lastName: lastName,
+            username: username,
             age: age,
             birthDay: birthDay,
             birthMonth: birthMonth,
@@ -104,14 +170,41 @@ class OnboardingModel: ObservableObject {
             do {
                 try await SupabaseManager.shared.client
                     .database
-                    .from("users")
+                    .from("profiles")
                     .insert(user)
                     .execute()
-                
-                print("✅ User saved to Supabase.")
+
+                for (index, image) in userPhotos.enumerated() {
+                    if let imageData = image.jpegData(compressionQuality: 0.8) {
+                        let filename = "\(userId)/photo_\(index)_\(UUID().uuidString).jpg"
+
+                        try await SupabaseManager.shared.client
+                            .storage
+                            .from("user-photos")
+                            .upload(
+                                path: filename,
+                                file: imageData,
+                                options: FileOptions(contentType: "image/jpeg")
+                            )
+
+                        let publicUrl = "\(SupabaseManager.shared.publicStorageUrlBase)/user-photos/\(filename)"
+
+                        try await SupabaseManager.shared.client
+                            .database
+                            .from("user_photos")
+                            .insert([
+                                "user_id": userId,
+                                "url": publicUrl
+                            ])
+                            .execute()
+                    }
+                }
+
+                print("✅ User and photos saved to Supabase.")
                 completion(true)
+
             } catch {
-                print("❌ Failed to save user: \(error.localizedDescription)")
+                print("❌ Failed to save user/photos: \(error.localizedDescription)")
                 completion(false)
             }
         }
@@ -126,14 +219,15 @@ class OnboardingModel: ObservableObject {
         phoneNumber = ""
         verificationCode = ""
         firstName = ""
+        lastName = ""
+        username = ""
         age = nil
         userPhotos = []
         selectedImage = nil
         isPhoneVerificationSent = false
         currentStep = .phone
     }
-    
-    // Define which steps count toward progress bar
+
     private var progressSteps: [OnboardingStep] {
         [.firstName, .birthday, .photos]
     }
@@ -145,5 +239,4 @@ class OnboardingModel: ObservableObject {
     var totalProgressSteps: Int {
         progressSteps.count
     }
-
 }

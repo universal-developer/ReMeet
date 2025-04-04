@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		4B5F45D32D89E69200B1CE1E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5F45D22D89E69200B1CE1E /* Supabase */; };
 		4B63BAD82D80AB2900FB53D1 /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4B63BAD72D80AB2900FB53D1 /* PhoneNumberKit */; };
+		4B6410452DA0027500B59BD3 /* BirdKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4B6410442DA0027500B59BD3 /* BirdKit */; };
 		4B95D5C22D89E49B00AA1D22 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C12D89E49B00AA1D22 /* Auth */; };
 		4B95D5C42D89E49B00AA1D22 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C32D89E49B00AA1D22 /* Functions */; };
 		4B95D5C62D89E49B00AA1D22 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5C52D89E49B00AA1D22 /* PostgREST */; };
@@ -67,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B6410452DA0027500B59BD3 /* BirdKit in Frameworks */,
 				4B5F45D32D89E69200B1CE1E /* Supabase in Frameworks */,
 				4B95D5CA2D89E49B00AA1D22 /* Storage in Frameworks */,
 				4B95D5C62D89E49B00AA1D22 /* PostgREST in Frameworks */,
@@ -154,6 +156,7 @@
 				4B95D5C72D89E49B00AA1D22 /* Realtime */,
 				4B95D5C92D89E49B00AA1D22 /* Storage */,
 				4B5F45D22D89E69200B1CE1E /* Supabase */,
+				4B6410442DA0027500B59BD3 /* BirdKit */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -245,6 +248,7 @@
 			packageReferences = (
 				4B63BAD62D80AB2900FB53D1 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
 				4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				4B6410432DA0027500B59BD3 /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B1363A62D4CC44E000B21B0 /* Products */;
@@ -619,6 +623,14 @@
 				minimumVersion = 4.0.2;
 			};
 		};
+		4B6410432DA0027500B59BD3 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/messagebird/swift-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.2.2;
+			};
+		};
 		4B95D5C02D89E49B00AA1D22 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase-community/supabase-swift";
@@ -639,6 +651,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4B63BAD62D80AB2900FB53D1 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */;
 			productName = PhoneNumberKit;
+		};
+		4B6410442DA0027500B59BD3 /* BirdKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B6410432DA0027500B59BD3 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = BirdKit;
 		};
 		4B95D5C12D89E49B00AA1D22 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;

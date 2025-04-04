@@ -12,9 +12,14 @@ class SupabaseManager {
     static let shared = SupabaseManager()
 
     let client: SupabaseClient
+    let supabaseURL: URL
+
+    var publicStorageUrlBase: String {
+        return "\(supabaseURL.absoluteString)/storage/v1/object/public"
+    }
 
     private init() {
-        let url = URL(string: Secrets.supabaseURL)!
-        client = SupabaseClient(supabaseURL: url, supabaseKey: Secrets.supabaseKey)
+        supabaseURL = URL(string: Secrets.supabaseURL)!
+        client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: Secrets.supabaseKey)
     }
 }
