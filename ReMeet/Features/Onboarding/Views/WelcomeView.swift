@@ -70,7 +70,7 @@ struct WelcomeView: View {
                 case .onboarding:
                     OnboardingContainerView()
                 case .qrScan:
-                    QRScannerView()
+                    QRHubView()
                 }
             }
             .navigationBarHidden(true)
