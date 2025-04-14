@@ -96,7 +96,9 @@ GoogleService-Info.plist
 .env*
 !.env.example
 Secrets.plist
+Info.plist
 
 # SwiftUI previews
 *.xcuserstate
 */Preview Content/*
+

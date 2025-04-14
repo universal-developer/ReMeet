@@ -19,6 +19,7 @@
 		4B95D5D02D89E59F00AA1D22 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5CF2D89E59F00AA1D22 /* PostgREST */; };
 		4B95D5D22D89E59F00AA1D22 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D12D89E59F00AA1D22 /* Realtime */; };
 		4B95D5D42D89E59F00AA1D22 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D32D89E59F00AA1D22 /* Storage */; };
+		4BEFEF7B2DACE9BA0055D90E /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,9 +45,22 @@
 		4B1363C12D4CC44E000B21B0 /* ReMeetUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReMeetUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4BBFFA7A2DACE3B2004D8713 /* Exceptions for "ReMeet" folder in "ReMeet" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4B1363A42D4CC44E000B21B0 /* ReMeet */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4B1363A72D4CC44E000B21B0 /* ReMeet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4BBFFA7A2DACE3B2004D8713 /* Exceptions for "ReMeet" folder in "ReMeet" target */,
+			);
 			path = ReMeet;
 			sourceTree = "<group>";
 		};
@@ -69,6 +83,7 @@
 			files = (
 				4B4552822DAA94FE006AB02C /* PhoneNumberKit in Frameworks */,
 				4B4552732DAA92AC006AB02C /* PostgREST in Frameworks */,
+				4BEFEF7B2DACE9BA0055D90E /* MapboxMaps in Frameworks */,
 				4B4552712DAA92AC006AB02C /* Functions in Frameworks */,
 				4B45526F2DAA92AC006AB02C /* Auth in Frameworks */,
 				4B4552802DAA9475006AB02C /* Supabase in Frameworks */,
@@ -154,6 +169,7 @@
 				4B4552762DAA92AC006AB02C /* Storage */,
 				4B45527F2DAA9475006AB02C /* Supabase */,
 				4B4552812DAA94FE006AB02C /* PhoneNumberKit */,
+				4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -245,6 +261,7 @@
 			packageReferences = (
 				4B45526D2DAA92AC006AB02C /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				4B4552782DAA92BD006AB02C /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+				4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B1363A62D4CC44E000B21B0 /* Products */;
@@ -451,6 +468,7 @@
 				DEVELOPMENT_TEAM = 9FHGGD776V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReMeet/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -482,6 +500,7 @@
 				DEVELOPMENT_TEAM = 9FHGGD776V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReMeet/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -627,6 +646,14 @@
 				minimumVersion = 4.0.2;
 			};
 		};
+		4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.13.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -684,6 +711,11 @@
 		4B95D5D32D89E59F00AA1D22 /* Storage */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Storage;
+		};
+		4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
+			productName = MapboxMaps;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

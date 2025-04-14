@@ -15,6 +15,10 @@ struct Secrets {
     static var supabaseKey: String {
         getValue(for: "SUPABASE_KEY")
     }
+    
+    static var mapboxToken: String {
+        getValue(for: "MAPBOX_PUBLIC_TOKEN")
+    }
 
     private static func getValue(for key: String) -> String {
         guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
