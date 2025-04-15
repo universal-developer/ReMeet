@@ -17,7 +17,10 @@ struct PhoneVerificationStepView: View {
         model.currentStep.validate(model: model)
     }
 
+
     var body: some View {
+        let country = CountryManager.shared.country(for: model.selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
+        
         VStack(spacing: 20) {
             Text("Verify your phone number")
                 .font(.title3)
@@ -26,7 +29,7 @@ struct PhoneVerificationStepView: View {
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-            Text("Enter the 6-digit code we sent to\n+\(model.phoneNumber)")
+            Text("Enter the 6-digit code we sent to\n+\(country.phoneCode)\(model.phoneNumber)")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)

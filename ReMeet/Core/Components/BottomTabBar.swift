@@ -21,7 +21,7 @@ struct BottomTabBar: View {
                     Image(selectedTab == item ? item.filledIconName : item.iconName)
                         .renderingMode(.template)
                         .resizable()
-                        .frame(width: 24, height: 24)
+                        .frame(width: 28, height: 28)
                         .foregroundColor(.black) // or use pink for selected if you prefer
                 }
 

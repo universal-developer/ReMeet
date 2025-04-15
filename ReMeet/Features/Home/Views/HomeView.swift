@@ -6,49 +6,64 @@
 //
 
 import SwiftUI
-import CoreLocation
+import MapboxMaps
 
 struct HomeMapScreen: View {
-    let center = CLLocationCoordinate2D(latitude: 39.5, longitude: -98.0)
-
+    @State private var mapViewRef: MapView? = nil
+    
     var body: some View {
         ZStack {
             MapViewRepresentable()
-                .ignoresSafeArea()
+                            .ignoresSafeArea()
 
             VStack {
-                HStack {
-                    // Search field (or just an icon if you want a full screen search)
+                HStack(spacing: 12) {
+                    // Avatar
+                    Button(action: {
+                        print("👤 Avatar tapped")
+                    }) {
+                        Image("profilePlaceholder") // Replace with real avatar later
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    }
+
+                    Spacer()
+
+                    // Search pill
                     Button(action: {
                         print("🔍 Search tapped")
                     }) {
                         HStack {
                             Image(systemName: "magnifyingglass")
-                            Text("Search")
-                                .foregroundColor(.gray)
+                            Text("Earth") // Or user's current area
+                                .fontWeight(.medium)
                         }
-                        .padding(10)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                         .background(.ultraThinMaterial)
-                        .cornerRadius(12)
+                        .cornerRadius(20)
                     }
 
                     Spacer()
 
-                    // Notification button
+                    // Settings
                     Button(action: {
-                        print("🔔 Notifications tapped")
+                        print("⚙️ Settings tapped")
                     }) {
-                        Image(systemName: "bell.fill")
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(.primary)
                             .padding(10)
                             .background(.ultraThinMaterial)
                             .clipShape(Circle())
                     }
                 }
                 .padding(.horizontal)
-                .padding(.top, 60) // adjust for notch
+                .padding(.top, 30)
 
                 Spacer()
             }
+
         }
     }
 }

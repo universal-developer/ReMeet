@@ -16,13 +16,13 @@ class OnboardingModel: ObservableObject {
     @Published var verificationCode: String = ""
     @Published var firstName: String = ""
     @Published var lastName: String = ""
-    @Published var username: String = ""
     @Published var age: Int?
     @Published var birthDay: String = ""
     @Published var birthMonth: String = ""
     @Published var birthYear: String = ""
     @Published var userPhotos: [UIImage] = []
     @Published var selectedImage: UIImage?
+
 
     // MARK: - State
     @Published var isPhoneVerificationSent: Bool = false
@@ -34,7 +34,6 @@ class OnboardingModel: ObservableObject {
         let id: String
         let firstName: String
         let lastName: String
-        let username: String
         let age: Int
         let birthDay: String
         let birthMonth: String
@@ -46,7 +45,6 @@ class OnboardingModel: ObservableObject {
             case id
             case firstName = "first_name"
             case lastName = "last_name"
-            case username = "username"
             case age
             case birthDay = "birth_day"
             case birthMonth = "birth_month"
@@ -88,15 +86,22 @@ class OnboardingModel: ObservableObject {
     }
 
     func sendVerificationCode() {
-        // Strip leading zero if it exists
-        var trimmedPhone = phoneNumber
+        // Clean up number: remove non-digits
+        var trimmedPhone = phoneNumber.filter { $0.isNumber }
+
+        // Remove leading 0 if present (e.g. for FR numbers)
         if trimmedPhone.hasPrefix("0") {
             trimmedPhone.removeFirst()
         }
 
-        let fullPhoneNumber = "+\(selectedCountryCode)\(trimmedPhone)"
-        print("📤 Sending OTP to: \(fullPhoneNumber)")
-        
+        let country = CountryManager.shared.country(for: selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
+        let fullPhoneNumber = "+\(country.phoneCode)\(trimmedPhone)"
+        print("📤 SENDING OTP TO >>> [\(fullPhoneNumber)]")
+        print("📞 Raw phoneNumber entered: \(phoneNumber)")
+        print("🌍 Selected country code: \(selectedCountryCode)")
+        print("🧼 Cleaned & trimmed: \(trimmedPhone)")
+        print("📤 Final phone sent to Supabase: +\(country.phoneCode)\(trimmedPhone)")
+
         isLoading = true
         Task {
             do {
@@ -123,7 +128,8 @@ class OnboardingModel: ObservableObject {
         if trimmedPhone.hasPrefix("0") {
             trimmedPhone.removeFirst()
         }
-        let fullPhoneNumber = "+\(selectedCountryCode)\(trimmedPhone)"
+        let country = CountryManager.shared.country(for: selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
+        let fullPhoneNumber = "+\(country.phoneCode)\(trimmedPhone)"
         isLoading = true
         Task {
             do {
@@ -146,18 +152,25 @@ class OnboardingModel: ObservableObject {
 
 
     func saveUserProfile(completion: @escaping (Bool) -> Void) {
-        guard let age = age,
-              let userId = SupabaseManager.shared.client.auth.currentUser?.id.uuidString else {
-            print("🚫 Missing data, cannot save user.")
-            completion(false)
+        print("🧪 Supabase currentUser ID: \(SupabaseManager.shared.client.auth.currentUser?.id.uuidString ?? "nil")")
+        
+        guard let age = age else {
+            print("🚫 Missing age, cannot save user.")
+            DispatchQueue.main.async { completion(false) }
             return
         }
+
+        guard let userId = SupabaseManager.shared.client.auth.currentUser?.id.uuidString else {
+            print("❌ No authenticated user.")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+        print("🧪 Using fallback UUID: \(userId)")
 
         let user = Instrument(
             id: userId,
             firstName: firstName,
             lastName: lastName,
-            username: username,
             age: age,
             birthDay: birthDay,
             birthMonth: birthMonth,
@@ -166,49 +179,68 @@ class OnboardingModel: ObservableObject {
             selectedCountryCode: selectedCountryCode
         )
 
+        print("🧪 Preparing to insert profile with ID: \(user.id)")
+
         Task {
             do {
+                print("📤 Inserting profile...")
                 try await SupabaseManager.shared.client
                     .database
                     .from("profiles")
                     .insert(user)
                     .execute()
+                print("✅ Profile inserted.")
 
                 for (index, image) in userPhotos.enumerated() {
-                    if let imageData = image.jpegData(compressionQuality: 0.8) {
-                        let filename = "\(userId)/photo_\(index)_\(UUID().uuidString).jpg"
-
-                        try await SupabaseManager.shared.client
-                            .storage
-                            .from("user-photos")
-                            .upload(
-                                path: filename,
-                                file: imageData,
-                                options: FileOptions(contentType: "image/jpeg")
-                            )
-
-                        let publicUrl = "\(SupabaseManager.shared.publicStorageUrlBase)/user-photos/\(filename)"
-
-                        try await SupabaseManager.shared.client
-                            .database
-                            .from("user_photos")
-                            .insert([
-                                "user_id": userId,
-                                "url": publicUrl
-                            ])
-                            .execute()
+                    print("📸 Uploading photo #\(index)...")
+                    
+                    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                        print("❌ Could not convert photo #\(index) to JPEG data.")
+                        continue
                     }
+
+                    let filename = "\(userId)/photo_\(index)_\(UUID().uuidString).jpg"
+                    print("🧾 Upload filename: \(filename)")
+
+                    try await SupabaseManager.shared.client
+                        .storage
+                        .from("user-photos")
+                        .upload(
+                            path: filename,
+                            file: imageData,
+                            options: FileOptions(contentType: "image/jpeg")
+                        )
+                    print("✅ Photo #\(index) uploaded.")
+
+                    let publicUrl = "\(SupabaseManager.shared.publicStorageUrlBase)/user-photos/\(filename)"
+                    print("🌐 Public URL: \(publicUrl)")
+
+                    print("🧾 Inserting photo URL into database...")
+                    try await SupabaseManager.shared.client
+                        .database
+                        .from("user_photos")
+                        .insert([
+                            "user_id": "\(userId)",  // This should be a string, not a UUID
+                            "url": publicUrl
+                        ])
+                        .execute()
+                    print("✅ Photo #\(index) record inserted.")
                 }
 
-                print("✅ User and photos saved to Supabase.")
-                completion(true)
+                print("🎉 All photos saved.")
+                DispatchQueue.main.async { completion(true) }
 
             } catch {
-                print("❌ Failed to save user/photos: \(error.localizedDescription)")
-                completion(false)
+                print("❌ Failed during saveUserProfile: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.errorMessage = "Something went wrong. Please try again."
+                    completion(false)
+                }
             }
         }
     }
+
+
 
     func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: "isLoggedIn")
@@ -220,7 +252,6 @@ class OnboardingModel: ObservableObject {
         verificationCode = ""
         firstName = ""
         lastName = ""
-        username = ""
         age = nil
         userPhotos = []
         selectedImage = nil

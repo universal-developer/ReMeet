@@ -11,14 +11,14 @@ struct ReMeetApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainAppView()
-            /*if isLoggedIn {
+            //MainAppView()
+            if isLoggedIn {
                 HomeMapScreen() // ← renamed from HomeView
             } else {
                 NavigationView {
                     WelcomeView()
                 }
-            }*/
+            }
         }
     }
 }

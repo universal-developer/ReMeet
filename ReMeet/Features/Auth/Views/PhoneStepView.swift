@@ -200,7 +200,11 @@ struct PhoneStepView: View {
                 action: {
                     if isValid {
                         // Save the raw digits to the model for verification
-                        model.phoneNumber = localPhoneNumber.filter { $0.isNumber }
+                        var raw = localPhoneNumber.filter { $0.isNumber }
+                        if raw.hasPrefix("0") {
+                            raw.removeFirst()
+                        }
+                        model.phoneNumber = raw
                         print("✅ Phone validation passed: '+\(selectedCountry.phoneCode) \(model.phoneNumber)'")
                         model.currentStep = .verification
                     } else {

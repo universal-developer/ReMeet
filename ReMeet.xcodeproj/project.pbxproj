@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4B22B7BC2DADC1E70069F74B /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4B22B7BB2DADC1E70069F74B /* MapboxMaps */; };
 		4B45526F2DAA92AC006AB02C /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4B45526E2DAA92AC006AB02C /* Auth */; };
 		4B4552712DAA92AC006AB02C /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4B4552702DAA92AC006AB02C /* Functions */; };
 		4B4552732DAA92AC006AB02C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B4552722DAA92AC006AB02C /* PostgREST */; };
@@ -19,7 +20,6 @@
 		4B95D5D02D89E59F00AA1D22 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5CF2D89E59F00AA1D22 /* PostgREST */; };
 		4B95D5D22D89E59F00AA1D22 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D12D89E59F00AA1D22 /* Realtime */; };
 		4B95D5D42D89E59F00AA1D22 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D32D89E59F00AA1D22 /* Storage */; };
-		4BEFEF7B2DACE9BA0055D90E /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,7 +83,7 @@
 			files = (
 				4B4552822DAA94FE006AB02C /* PhoneNumberKit in Frameworks */,
 				4B4552732DAA92AC006AB02C /* PostgREST in Frameworks */,
-				4BEFEF7B2DACE9BA0055D90E /* MapboxMaps in Frameworks */,
+				4B22B7BC2DADC1E70069F74B /* MapboxMaps in Frameworks */,
 				4B4552712DAA92AC006AB02C /* Functions in Frameworks */,
 				4B45526F2DAA92AC006AB02C /* Auth in Frameworks */,
 				4B4552802DAA9475006AB02C /* Supabase in Frameworks */,
@@ -169,7 +169,7 @@
 				4B4552762DAA92AC006AB02C /* Storage */,
 				4B45527F2DAA9475006AB02C /* Supabase */,
 				4B4552812DAA94FE006AB02C /* PhoneNumberKit */,
-				4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */,
+				4B22B7BB2DADC1E70069F74B /* MapboxMaps */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -261,7 +261,7 @@
 			packageReferences = (
 				4B45526D2DAA92AC006AB02C /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				4B4552782DAA92BD006AB02C /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
-				4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+				4B22B7BA2DADC1E70069F74B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B1363A62D4CC44E000B21B0 /* Products */;
@@ -630,6 +630,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		4B22B7BA2DADC1E70069F74B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.11.0;
+			};
+		};
 		4B45526D2DAA92AC006AB02C /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -646,17 +654,14 @@
 				minimumVersion = 4.0.2;
 			};
 		};
-		4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 10.13.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		4B22B7BB2DADC1E70069F74B /* MapboxMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B22B7BA2DADC1E70069F74B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
+			productName = MapboxMaps;
+		};
 		4B45526E2DAA92AC006AB02C /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 4B45526D2DAA92AC006AB02C /* XCRemoteSwiftPackageReference "supabase-swift" */;
@@ -711,11 +716,6 @@
 		4B95D5D32D89E59F00AA1D22 /* Storage */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Storage;
-		};
-		4BEFEF7A2DACE9BA0055D90E /* MapboxMaps */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4BEFEF792DACE9BA0055D90E /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
-			productName = MapboxMaps;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

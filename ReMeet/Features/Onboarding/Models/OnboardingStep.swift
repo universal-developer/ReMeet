@@ -6,22 +6,21 @@
 //
 
 enum OnboardingStep: Int, CaseIterable {
-    case phone, verification, personalisation, firstName, birthday, photos
+    case phone, verification, personalisation, firstName, birthday, photos, permissions
 
     func validate(model: OnboardingModel) -> Bool {
         switch self {
         case .phone:
             return model.phoneNumber.count >= 10
         case .verification:
-            return model.verificationCode.count == 6 &&
-                   model.verificationCode.allSatisfy { $0.isNumber }
+            return model.verificationCode.count == 6 && model.verificationCode.allSatisfy { $0.isNumber }
         case .personalisation:
             return true
         case .firstName:
             return !model.firstName.trimmingCharacters(in: .whitespaces).isEmpty
         case .birthday:
             return model.age != nil && model.age! >= 13
-        case .photos :
+        case .photos, .permissions:
             return true
         }
     }
@@ -31,30 +30,32 @@ enum OnboardingStep: Int, CaseIterable {
         case .phone:
             model.sendVerificationCode()
             model.advanceStep()
+            completion()
         case .verification:
             model.verifyCode { success in
-                if success { model.advanceStep() }
+                if success {
+                    model.advanceStep()
+                    completion()
+                } else {
+                    model.errorMessage = "Verification failed. Please check the code and try again."
+                }
             }
-        case .personalisation:
+
+        case .personalisation, .firstName, .birthday:
             model.advanceStep()
-        case .firstName, .birthday:
-            model.advanceStep()
+            completion()
         case .photos:
             model.saveUserProfile { success in
-                if success { model.advanceStep() }
-                else {
+                if success {
+                    model.advanceStep()
+                    completion()
+                } else {
                     model.errorMessage = "Couldn't save your profile. Please try again."
                 }
             }
-            
+        case .permissions:
             model.completeOnboarding()
-        /*case .permissions:
-            model.completeOnboarding()
-                        
-            print("📱 Phone: \(model.phoneNumber)")
-            print("👤 First Name: \(model.firstName)")
-            print("🎂 Age: \(model.age ?? -1)")
-            print("📷 Photos selected: \(model.userPhotos.count)")*/
+            completion()
         }
     }
 }
