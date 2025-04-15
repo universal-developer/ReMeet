@@ -31,6 +31,7 @@ class OnboardingModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var currentStep: OnboardingStep = .phone
 
+    
     struct Instrument: Encodable {
         let id: String
         let firstName: String
@@ -54,6 +55,12 @@ class OnboardingModel: ObservableObject {
             case selectedCountryCode = "selected_country_code"
         }
     }
+    
+    struct UserPhoto: Encodable {
+        let user_id: UUID
+        let url: String
+    }
+
 
     // MARK: - Navigation
     var progressPercentage: Double {
@@ -165,48 +172,45 @@ class OnboardingModel: ObservableObject {
             return
         }
 
-        guard let userId = SupabaseManager.shared.client.auth.currentUser?.id.uuidString else {
-            print("❌ No authenticated user.")
-            DispatchQueue.main.async { completion(false) }
-            return
-        }
-        print("🧪 Using fallback UUID: \(userId)")
-
-        let userProfile: Instrument = Instrument(
-            id: userId,
-            firstName: firstName,
-            lastName: lastName,
-            age: age,
-            birthDay: birthDay,
-            birthMonth: birthMonth,
-            birthYear: birthYear,
-            phoneNumber: phoneNumber,
-            selectedCountryCode: selectedCountryCode
-        )
-
-
-        print("🧪 Preparing to insert profile with ID: \(userProfile.id)")
-
         Task<Void, Never> {
             do {
+                let session = try await SupabaseManager.shared.client.auth.session
+                let userId = session.user.id
+
+                print("🧪 Using session UUID: \(userId.uuidString)")
+
+                let userProfile = Instrument(
+                    id: userId.uuidString,
+                    firstName: firstName,
+                    lastName: lastName,
+                    age: age,
+                    birthDay: birthDay,
+                    birthMonth: birthMonth,
+                    birthYear: birthYear,
+                    phoneNumber: phoneNumber,
+                    selectedCountryCode: selectedCountryCode
+                )
+
+                print("🧪 Preparing to insert profile with ID: \(userProfile.id)")
                 print("📤 Inserting profile...")
+
                 try await SupabaseManager.shared.client
                     .database
                     .from("profiles")
                     .upsert(userProfile, onConflict: "id")
-
                     .execute()
+
                 print("✅ Profile inserted.")
 
                 for (index, image) in userPhotos.enumerated() {
                     print("📸 Uploading photo #\(index)...")
-                    
-                    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                        print("❌ Could not convert photo #\(index) to JPEG data.")
+
+                    guard let imageData = image.jpegData(compressionQuality: 0.4) else {
+                        print("❌ Could not convert photo #\(index) to compressed JPEG.")
                         continue
                     }
 
-                    let filename = "\(userId)/photo_\(index)_\(UUID().uuidString).jpg"
+                    let filename = "\(userId.uuidString)/photo_\(index)_\(UUID().uuidString).jpg"
                     print("🧾 Upload filename: \(filename)")
 
                     try await SupabaseManager.shared.client
@@ -215,27 +219,27 @@ class OnboardingModel: ObservableObject {
                         .upload(
                             path: filename,
                             file: imageData,
-                            options: FileOptions(contentType: "image/jpeg")
+                            options: FileOptions(contentType: "image/jpeg", upsert: true)
                         )
+
                     print("✅ Photo #\(index) uploaded.")
 
                     let publicUrl = "\(SupabaseManager.shared.publicStorageUrlBase)/user-photos/\(filename)"
                     print("🌐 Public URL: \(publicUrl)")
 
-                    print("🧾 Inserting photo URL into database...")
-                    guard let userUUID = SupabaseManager.shared.client.auth.currentUser?.id else {
-                        print("❌ No user ID found")
-                        return
-                    }
+                    let photoRecord = UserPhoto(
+                        user_id: userId,
+                        url: publicUrl
+                    )
+
+                    print("🧪 Final UserPhoto payload: user_id = \(photoRecord.user_id), url = \(photoRecord.url)")
 
                     try await SupabaseManager.shared.client
                         .database
                         .from("user_photos")
-                        .insert([
-                            "user_id": userUUID.uuidString, // 👈 convert UUID to String
-                            "url": publicUrl
-                        ])
+                        .upsert(photoRecord, onConflict: "url")
                         .execute()
+
                     print("✅ Photo #\(index) record inserted.")
                 }
 
@@ -251,6 +255,9 @@ class OnboardingModel: ObservableObject {
             }
         }
     }
+
+
+
 
 
 
