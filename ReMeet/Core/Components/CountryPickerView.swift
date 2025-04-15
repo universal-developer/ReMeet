@@ -10,26 +10,28 @@ import SwiftUI
 struct CountryPickerView: View {
     @Binding var selectedCountry: Country
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var colorScheme
     @State private var searchText = ""
-    
+
     var body: some View {
         NavigationView {
             ZStack {
+
                 VStack {
                     // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        
+                            .foregroundColor(searchIconColor)
+
                         TextField("Search", text: $searchText)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                     }
                     .padding(10)
-                    .background(Color(UIColor.systemGray6))
+                    .background(searchBarBackground)
                     .cornerRadius(10)
                     .padding(.horizontal)
                     .padding(.top, 10)
-                    
+
                     // Country list
                     List {
                         ForEach(filteredCountries) { country in
@@ -40,7 +42,10 @@ struct CountryPickerView: View {
                                 HStack {
                                     Text(CountryManager.shared.countryFlag(country.code))
                                     Text(country.name)
+                                        .foregroundColor(textColor)
+
                                     Spacer()
+
                                     Text("+" + country.phoneCode)
                                         .foregroundColor(.gray)
                                 }
@@ -49,6 +54,7 @@ struct CountryPickerView: View {
                         }
                     }
                     .listStyle(PlainListStyle())
+                    .background(backgroundColor)
                 }
             }
             .navigationBarTitle("", displayMode: .inline)
@@ -60,7 +66,7 @@ struct CountryPickerView: View {
             )
         }
     }
-    
+
     private var filteredCountries: [Country] {
         if searchText.isEmpty {
             return CountryManager.shared.allCountries
@@ -70,5 +76,22 @@ struct CountryPickerView: View {
                 country.phoneCode.contains(searchText)
             }
         }
+    }
+
+    // MARK: - Adaptive Colors
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color.black : Color.white
+    }
+
+    private var textColor: Color {
+        colorScheme == .dark ? Color.white : Color.black
+    }
+
+    private var searchBarBackground: Color {
+        colorScheme == .dark ? Color.white.opacity(0.1) : Color(UIColor.systemGray6)
+    }
+
+    private var searchIconColor: Color {
+        colorScheme == .dark ? .gray.opacity(0.7) : .gray
     }
 }

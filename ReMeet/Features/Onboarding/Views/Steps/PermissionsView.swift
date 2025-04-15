@@ -7,87 +7,66 @@
 
 import SwiftUI
 import CoreLocation
+import UserNotifications
 
 struct PermissionsView: View {
-    @ObservedObject var model: OnboardingModel  
+    @ObservedObject var model: OnboardingModel
     @State private var permissionStage: PermissionStage = .location
     @StateObject private var locationManager = LocationPermissionManager()
+    @AppStorage("isLoggedIn") var isLoggedIn = false
     
     enum PermissionStage {
         case location
         case notifications
-        case completed
     }
-    
+
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
             
-            // Icon at the top
+            // MARK: - Icon
             ZStack {
                 Circle()
-                    .fill(Color(hex: "C9145B").opacity(0.2))
+                    .fill(Color(hex: "C9155A").opacity(0.2))
                     .frame(width: 70, height: 70)
                 
-                if permissionStage == .location {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(Color(hex: "C9145B"))
-                } else {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(Color(hex: "C9145B"))
-                }
+                Image(systemName: permissionStage == .location ? "location.fill" : "bell.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(Color(hex: "C9155A"))
             }
-            
-            // Title and description
-            if permissionStage == .location {
-                Text("Now, can we get your location?")
+
+            // MARK: - Text
+            Group {
+                Text(permissionStage == .location ? "Can we access your location?" : "Enable notifications")
                     .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
-                Text("We need it so we can show you all the great people nearby (or far away).")
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-            } else {
-                Text("Don't miss a beat, or a match")
-                    .font(.system(size: 28, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Text("Turn on your notifications so we can let you know when you have new connections nearby.")
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
+
+                Text(permissionStage == .location
+                     ? "We'll show you people you meet nearby—at events, venues, or on the go."
+                     : "We’ll let you know when someone reconnects with you or visits a place you’ve been.")
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
             }
-            
+
             Spacer()
-            
-            // Action buttons
+
+            // MARK: - Buttons
             if permissionStage == .location {
-                Button(action: requestLocationPermission) {
-                    Text("Set location services")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.darkGray))
-                        .foregroundColor(.white)
-                        .cornerRadius(30)
-                        .padding(.horizontal, 20)
-                }
+                PrimaryButton(
+                    title: "Enable Location",
+                    action: requestLocationPermission
+                )
+                .padding(.horizontal, 20)
             } else {
                 VStack(spacing: 16) {
-                    Button(action: requestNotificationPermission) {
-                        Text("Allow notifications")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.darkGray))
-                            .foregroundColor(.white)
-                            .cornerRadius(30)
-                            .padding(.horizontal, 20)
-                    }
-                    
+                    PrimaryButton(
+                        title: "Enable Notifications",
+                        action: requestNotificationPermission
+                    )
+                    .padding(.horizontal, 20)
+
                     Button(action: skipNotifications) {
                         Text("Not now")
                             .foregroundColor(.gray)
@@ -98,39 +77,33 @@ struct PermissionsView: View {
         .padding(.bottom, 40)
         .onChange(of: locationManager.authorizationStatus) { status in
             if status != .notDetermined {
-                // Move to notifications after location permission is decided
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Transition to notifications smoothly
+                withAnimation {
                     permissionStage = .notifications
                 }
             }
         }
     }
-    
+
+    // MARK: - Permissions
     private func requestLocationPermission() {
         locationManager.requestPermission()
     }
-    
+
     private func requestNotificationPermission() {
-        // Request notification permissions
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in
             DispatchQueue.main.async {
-                completeOnboarding()
+                model.moveToNextStep()
             }
         }
     }
-    
+
     private func skipNotifications() {
-        completeOnboarding()
-    }
-    
-    private func completeOnboarding() {
-        UserDefaults.standard.set(true, forKey: "isLoggedIn")
-        // Close the onboarding and go to main app
         model.moveToNextStep()
     }
 }
 
-// Helper class to manage location permissions
+// MARK: - Location Permission Manager
 class LocationPermissionManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined

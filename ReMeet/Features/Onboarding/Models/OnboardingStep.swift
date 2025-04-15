@@ -32,12 +32,13 @@ enum OnboardingStep: Int, CaseIterable {
         case .verification:
             model.verifyCode { success in
                 if success {
-                    model.advanceStep()
-                    completion()
+                    // ✅ Don't manually advance here
+                    completion() // this will trigger `.personalisation` correctly
                 } else {
                     model.errorMessage = "Verification failed. Please check the code and try again."
                 }
             }
+
 
         case .personalisation, .firstName, .birthday:
             model.advanceStep()

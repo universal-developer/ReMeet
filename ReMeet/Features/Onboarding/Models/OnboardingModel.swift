@@ -30,18 +30,20 @@ class OnboardingModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var currentStep: OnboardingStep = .phone
+    
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
 
     
-    struct Instrument: Encodable {
+    struct Instrument: Codable, Identifiable {
         let id: String
         let firstName: String
         let lastName: String
         let age: Int
-        let birthDay: String
-        let birthMonth: String
-        let birthYear: String
+        let birthDay: String?
+        let birthMonth: String?
+        let birthYear: String?
         let phoneNumber: String
-        let selectedCountryCode: String
+        let selectedCountryCode: String?
 
         enum CodingKeys: String, CodingKey {
             case id
@@ -142,15 +144,39 @@ class OnboardingModel: ObservableObject {
         let country = CountryManager.shared.country(for: selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
         let fullPhoneNumber = "\(country.phoneCode)\(trimmedPhone)"
         isLoading = true
+
         Task {
             do {
                 print("📨 Verifying OTP with phone: \(fullPhoneNumber), code: \(verificationCode)")
                 try await SupabaseManager.shared.client.auth.verifyOTP(phone: fullPhoneNumber, token: verificationCode, type: .sms)
+                print("✅ Phone verified via Supabase")
+
+                let session = try await SupabaseManager.shared.client.auth.session
+                let userId = session.user.id
+
+                let existingProfiles = try await SupabaseManager.shared.client
+                    .database
+                    .from("profiles")
+                    .select("*") // ← This is the missing piece!
+                    .eq("id", value: userId.uuidString)
+                    .execute()
+                    .value as [Instrument]
+
+
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    print("✅ Phone verified via Supabase")
+                    if !existingProfiles.isEmpty {
+                        // ✅ Profile exists – skip onboarding
+                        UserDefaults.standard.set(true, forKey: "isLoggedIn")
+                        print("🎉 Existing user profile found, launching main app.")
+                        self.currentStep = .permissions // optional: set currentStep to last step
+                    } else {
+                        // 🆕 No profile, continue onboarding
+                        self.advanceStep()
+                    }
                     completion(true)
                 }
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -161,6 +187,7 @@ class OnboardingModel: ObservableObject {
             }
         }
     }
+
 
 
     func saveUserProfile(completion: @escaping (Bool) -> Void) {
@@ -256,13 +283,8 @@ class OnboardingModel: ObservableObject {
         }
     }
 
-
-
-
-
-
     func completeOnboarding() {
-        UserDefaults.standard.set(true, forKey: "isLoggedIn")
+        isLoggedIn = true
         print("🎉 Onboarding complete for: \(firstName), age \(age ?? 0)")
     }
 
@@ -279,7 +301,7 @@ class OnboardingModel: ObservableObject {
     }
 
     private var progressSteps: [OnboardingStep] {
-        [.firstName, .birthday, .photos]
+        [.firstName, .birthday, .photos, .permissions]
     }
 
     var progressStepIndex: Int {
