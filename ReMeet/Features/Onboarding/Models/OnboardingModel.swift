@@ -172,7 +172,7 @@ class OnboardingModel: ObservableObject {
         }
         print("🧪 Using fallback UUID: \(userId)")
 
-        let user = Instrument(
+        let userProfile: Instrument = Instrument(
             id: userId,
             firstName: firstName,
             lastName: lastName,
@@ -184,15 +184,17 @@ class OnboardingModel: ObservableObject {
             selectedCountryCode: selectedCountryCode
         )
 
-        print("🧪 Preparing to insert profile with ID: \(user.id)")
 
-        Task {
+        print("🧪 Preparing to insert profile with ID: \(userProfile.id)")
+
+        Task<Void, Never> {
             do {
                 print("📤 Inserting profile...")
                 try await SupabaseManager.shared.client
                     .database
                     .from("profiles")
-                    .insert(user)
+                    .upsert(userProfile, onConflict: "id")
+
                     .execute()
                 print("✅ Profile inserted.")
 
@@ -221,11 +223,16 @@ class OnboardingModel: ObservableObject {
                     print("🌐 Public URL: \(publicUrl)")
 
                     print("🧾 Inserting photo URL into database...")
+                    guard let userUUID = SupabaseManager.shared.client.auth.currentUser?.id else {
+                        print("❌ No user ID found")
+                        return
+                    }
+
                     try await SupabaseManager.shared.client
                         .database
                         .from("user_photos")
                         .insert([
-                            "user_id": "\(userId)",  // This should be a string, not a UUID
+                            "user_id": userUUID.uuidString, // 👈 convert UUID to String
                             "url": publicUrl
                         ])
                         .execute()
