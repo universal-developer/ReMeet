@@ -70,8 +70,8 @@ struct PhoneVerificationStepView: View {
             .padding(.top, 20)
 
             Button(action: {
-                print("Resending verification code...")
-                // You can hook up resend logic here
+                print("🔁 Resending verification code...")
+                model.sendVerificationCode()
             }) {
                 Text("Didn't receive a code? Resend")
                     .font(.footnote)

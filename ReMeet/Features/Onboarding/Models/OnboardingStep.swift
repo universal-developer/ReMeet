@@ -29,8 +29,6 @@ enum OnboardingStep: Int, CaseIterable {
         switch self {
         case .phone:
             model.sendVerificationCode()
-            model.advanceStep()
-            completion()
         case .verification:
             model.verifyCode { success in
                 if success {

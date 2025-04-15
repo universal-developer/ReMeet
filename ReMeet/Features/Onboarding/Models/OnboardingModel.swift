@@ -13,6 +13,7 @@ class OnboardingModel: ObservableObject {
     // MARK: - User Data
     @Published var phoneNumber: String = ""
     @Published var selectedCountryCode: String = ""
+    @Published var fullPhoneForDisplay: String = ""
     @Published var verificationCode: String = ""
     @Published var firstName: String = ""
     @Published var lastName: String = ""
@@ -62,19 +63,23 @@ class OnboardingModel: ObservableObject {
     var canGoBack: Bool {
         true
     }
-
+    
     func moveToNextStep() {
+        print("➡️ moveToNextStep called — current step: \(currentStep)")
         if currentStep.validate(model: self) {
             currentStep.handleNext(for: self) {}
         }
     }
 
     func advanceStep() {
+        print("📲 Advancing from step: \(currentStep)")
         if let index = OnboardingStep.allCases.firstIndex(of: currentStep),
            index + 1 < OnboardingStep.allCases.count {
             currentStep = OnboardingStep.allCases[index + 1]
+            print("➡️ Now on step: \(currentStep)")
         }
     }
+
 
     func moveToPreviousStep(onFirstStep: () -> Void) {
         if let index = OnboardingStep.allCases.firstIndex(of: currentStep),
@@ -86,41 +91,40 @@ class OnboardingModel: ObservableObject {
     }
 
     func sendVerificationCode() {
-        // Clean up number: remove non-digits
-        var trimmedPhone = phoneNumber.filter { $0.isNumber }
+        print("📞 sendVerificationCode() STARTED")
 
-        // Remove leading 0 if present (e.g. for FR numbers)
+        var trimmedPhone = phoneNumber.filter { $0.isNumber }
         if trimmedPhone.hasPrefix("0") {
             trimmedPhone.removeFirst()
         }
 
         let country = CountryManager.shared.country(for: selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
-        let fullPhoneNumber = "+\(country.phoneCode)\(trimmedPhone)"
-        print("📤 SENDING OTP TO >>> [\(fullPhoneNumber)]")
-        print("📞 Raw phoneNumber entered: \(phoneNumber)")
-        print("🌍 Selected country code: \(selectedCountryCode)")
-        print("🧼 Cleaned & trimmed: \(trimmedPhone)")
-        print("📤 Final phone sent to Supabase: +\(country.phoneCode)\(trimmedPhone)")
+        let fullPhoneNumber = "\(country.phoneCode)\(trimmedPhone)"
+        print("📤 Full number sent to Supabase: \(fullPhoneNumber)")
 
         isLoading = true
+
         Task {
             do {
+                print("🚀 CALLING Supabase signInWithOTP...")
                 try await SupabaseManager.shared.client.auth.signInWithOTP(phone: fullPhoneNumber)
+                print("✅ CALL SUCCEEDED")
+
                 DispatchQueue.main.async {
                     self.isPhoneVerificationSent = true
                     self.isLoading = false
-                    print("✅ OTP sent")
+                    self.advanceStep() // ✅ GO TO OTP STEP HERE
                 }
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.errorMessage = "Failed to send code. Check your number."
-                    print("❌ Error sending OTP: \(error)")
+                    print("❌ Error sending OTP: \(String(describing: error))")
                 }
             }
         }
     }
-
 
 
     func verifyCode(completion: @escaping (Bool) -> Void) {
@@ -129,10 +133,11 @@ class OnboardingModel: ObservableObject {
             trimmedPhone.removeFirst()
         }
         let country = CountryManager.shared.country(for: selectedCountryCode) ?? Country(code: "US", name: "United States", phoneCode: "1")
-        let fullPhoneNumber = "+\(country.phoneCode)\(trimmedPhone)"
+        let fullPhoneNumber = "\(country.phoneCode)\(trimmedPhone)"
         isLoading = true
         Task {
             do {
+                print("📨 Verifying OTP with phone: \(fullPhoneNumber), code: \(verificationCode)")
                 try await SupabaseManager.shared.client.auth.verifyOTP(phone: fullPhoneNumber, token: verificationCode, type: .sms)
                 DispatchQueue.main.async {
                     self.isLoading = false

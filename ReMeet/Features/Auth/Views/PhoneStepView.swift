@@ -199,16 +199,19 @@ struct PhoneStepView: View {
                 title: "Next",
                 action: {
                     if isValid {
-                        // Save the raw digits to the model for verification
                         var raw = localPhoneNumber.filter { $0.isNumber }
                         if raw.hasPrefix("0") {
                             raw.removeFirst()
                         }
+
                         model.phoneNumber = raw
-                        print("✅ Phone validation passed: '+\(selectedCountry.phoneCode) \(model.phoneNumber)'")
-                        model.currentStep = .verification
+                        model.selectedCountryCode = selectedCountry.code
+                        model.fullPhoneForDisplay = "+\(selectedCountry.phoneCode)\(raw)" // ✅ Add this
+
+                        print("✅ Phone validation passed: \(model.fullPhoneForDisplay)")
+                        model.sendVerificationCode()
                     } else {
-                        print("❌ Phone validation failed: Invalid number format")
+                        print("❌ Phone validation failed")
                     }
                 },
                 backgroundColor: isValid ? Color(hex: "C9155A") : Color.gray.opacity(0.5)
