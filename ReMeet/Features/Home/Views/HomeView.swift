@@ -10,10 +10,11 @@ import MapboxMaps
 
 struct HomeMapScreen: View {
     @State private var mapViewRef: MapView? = nil
+    @ObservedObject var mapController: MapController
     
     var body: some View {
         ZStack {
-            MapViewRepresentable()
+            MapViewRepresentable(controller: mapController)
                             .ignoresSafeArea()
 
             VStack {
@@ -69,5 +70,5 @@ struct HomeMapScreen: View {
 }
 
 #Preview {
-    HomeMapScreen()
+    HomeMapScreen(mapController: MapController())
 }

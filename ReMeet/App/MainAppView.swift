@@ -9,6 +9,7 @@ import SwiftUI
   
 struct MainAppView: View {
     @State private var selectedTab: TabBarItem = .home
+    @StateObject private var mapController = MapController()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,7 +17,7 @@ struct MainAppView: View {
             ZStack {
                 switch selectedTab {
                 case .home:
-                    HomeMapScreen()
+                    HomeMapScreen(mapController: mapController)
                 case .explore:
                     ExploreView()
                 case .qr:

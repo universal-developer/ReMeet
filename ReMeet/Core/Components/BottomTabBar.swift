@@ -9,6 +9,7 @@ import SwiftUI
 
 struct BottomTabBar: View {
     @Binding var selectedTab: TabBarItem
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         HStack(spacing: 0) {
@@ -22,7 +23,7 @@ struct BottomTabBar: View {
                         .renderingMode(.template)
                         .resizable()
                         .frame(width: 28, height: 28)
-                        .foregroundColor(.black) // or use pink for selected if you prefer
+                        .foregroundColor(iconColor(for: item))
                 }
 
                 Spacer()
@@ -30,6 +31,18 @@ struct BottomTabBar: View {
         }
         .padding(.top, 12)
         .padding(.bottom, 22)
-        .background(Color.white.ignoresSafeArea(edges: .bottom))
+        .background(
+            colorScheme == .dark
+            ? Color.black.ignoresSafeArea(edges: .bottom)
+            : Color.white.ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    private func iconColor(for item: TabBarItem) -> Color {
+        if selectedTab == item {
+            return colorScheme == .dark ? .white : Color(hex: "C9155A")
+        } else {
+            return colorScheme == .dark ? .white.opacity(0.5) : .black
+        }
     }
 }

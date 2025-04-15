@@ -9,26 +9,37 @@ import SwiftUI
 import MapboxMaps
 
 struct MapViewRepresentable: UIViewRepresentable {
+    @ObservedObject var controller: MapController
+
     func makeUIView(context: Context) -> MapView {
-        let mapInitOptions = MapInitOptions(
-            cameraOptions: CameraOptions(zoom: 14),
-            styleURI: .streets
-        )
+        let mapView = controller.mapView
 
-        let mapView = MapView(frame: .zero, mapInitOptions: mapInitOptions)
+        if context.coordinator.initialized == false {
+            context.coordinator.mapView = mapView
 
-        // Setup blue dot (user location)
-        mapView.location.options.puckType = .puck2D()
-        mapView.location.options.puckBearingEnabled = true
+            // Observers only once
+            context.coordinator.locationObserver = mapView.location.onLocationChange.observe { locations in
+                guard let latest = locations.last else { return }
+                if context.coordinator.hasCenteredOnUser == false,
+                   context.coordinator.mapIsReady {
+                    let camera = CameraOptions(center: latest.coordinate, zoom: 15)
+                    mapView.camera.ease(to: camera, duration: 1.3)
+                    context.coordinator.hasCenteredOnUser = true
+                }
+            }
 
-        // Store mapView in coordinator
-        context.coordinator.mapView = mapView
+            context.coordinator.mapLoadObserver = mapView.mapboxMap.onMapLoaded.observeNext { _ in
+                context.coordinator.mapIsReady = true
 
-        // Observe location changes
-        mapView.location.onLocationChange.observe { locations in
-            guard let latest = locations.last else { return }
-            let camera = CameraOptions(center: latest.coordinate, zoom: 15)
-            mapView.camera.ease(to: camera, duration: 1.3)
+                if context.coordinator.hasCenteredOnUser == false,
+                   let latest = mapView.location.latestLocation {
+                    let camera = CameraOptions(center: latest.coordinate, zoom: 15)
+                    mapView.camera.ease(to: camera, duration: 1.0)
+                    context.coordinator.hasCenteredOnUser = true
+                }
+            }
+
+            context.coordinator.initialized = true
         }
 
         return mapView
@@ -42,5 +53,11 @@ struct MapViewRepresentable: UIViewRepresentable {
 
     class Coordinator {
         var mapView: MapView?
+        var hasCenteredOnUser = false
+        var mapIsReady = false
+        var initialized = false
+
+        var locationObserver: Cancelable?
+        var mapLoadObserver: Cancelable?
     }
 }
