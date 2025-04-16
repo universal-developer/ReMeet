@@ -102,7 +102,12 @@ struct MapViewRepresentable: UIViewRepresentable {
             }
 
             annotationView.alpha = 0
-            annotationView.transform = CGAffineTransform(translationX: 0, y: -20)
+            annotationView.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
+            annotationView.layer.shadowColor = UIColor.black.cgColor
+            annotationView.layer.shadowOpacity = 0.2
+            annotationView.layer.shadowOffset = CGSize(width: 0, height: 4)
+            annotationView.layer.shadowRadius = 6
+
 
             let options = ViewAnnotationOptions(
                 geometry: Point(coordinate),
@@ -115,10 +120,23 @@ struct MapViewRepresentable: UIViewRepresentable {
             do {
                 try mapView.viewAnnotations.add(annotationView, options: options)
 
-                UIView.animate(withDuration: 0.4, delay: 0.2, options: [.curveEaseOut], animations: {
-                    annotationView.alpha = 1
-                    annotationView.transform = .identity
-                }, completion: nil)
+                let isLowPowerDevice = ProcessInfo.processInfo.isLowPowerModeEnabled
+                let duration = isLowPowerDevice ? 0.3 : 0.6
+
+                UIView.animate(
+                    withDuration: duration,
+                    delay: 0.1,
+                    usingSpringWithDamping: 0.7,
+                    initialSpringVelocity: 0.8,
+                    options: [.curveEaseInOut],
+                    animations: {
+                        annotationView.alpha = 1
+                        annotationView.transform = .identity
+                    },
+                    completion: nil
+                )
+
+
             } catch {
                 print("❌ Failed to add view annotation: \(error)")
             }
