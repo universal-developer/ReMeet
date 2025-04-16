@@ -40,9 +40,9 @@ struct BottomTabBar: View {
 
     private func iconColor(for item: TabBarItem) -> Color {
         if selectedTab == item {
-            return colorScheme == .dark ? .white : Color(hex: "C9155A")
+            return colorScheme == .dark ? .white : .black // ✅ selected = white/black
         } else {
-            return colorScheme == .dark ? .white.opacity(0.5) : .black
+            return colorScheme == .dark ? .white.opacity(0.5) : .black.opacity(0.5) // ✅ unselected = faded
         }
     }
 }

@@ -16,6 +16,7 @@ struct HomeMapScreen: View {
         ZStack {
             MapViewRepresentable(controller: mapController)
                             .ignoresSafeArea()
+                            .edgesIgnoringSafeArea(.all)
 
             VStack {
                 HStack(spacing: 12) {
