@@ -16,6 +16,7 @@ class MapController: ObservableObject {
 
     struct UserPhoto: Decodable {
         let url: String
+        let is_main: Bool?
     }
 
     struct UserProfile: Decodable {
@@ -82,12 +83,14 @@ class MapController: ObservableObject {
                 let photos: [UserPhoto] = try await SupabaseManager.shared.client
                     .database
                     .from("user_photos")
-                    .select("url")
+                    .select("url, is_main")
                     .eq("user_id", value: userId)
+                    .order("is_main", ascending: false)
                     .order("created_at", ascending: false)
                     .limit(1)
                     .execute()
                     .value
+
 
                 guard let photoUrl = photos.first?.url else {
                     print("📷 No user photo found.")

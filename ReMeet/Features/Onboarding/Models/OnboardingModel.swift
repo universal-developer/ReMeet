@@ -61,6 +61,7 @@ class OnboardingModel: ObservableObject {
     struct UserPhoto: Encodable {
         let user_id: UUID
         let url: String
+        let is_main: Bool
     }
 
 
@@ -254,10 +255,13 @@ class OnboardingModel: ObservableObject {
                     let publicUrl = "\(SupabaseManager.shared.publicStorageUrlBase)/user-photos/\(filename)"
                     print("🌐 Public URL: \(publicUrl)")
 
+                    let isMain = (index == 0) // or check images[index].isMain if you're keeping that info
                     let photoRecord = UserPhoto(
                         user_id: userId,
-                        url: publicUrl
+                        url: publicUrl,
+                        is_main: isMain
                     )
+
 
                     print("🧪 Final UserPhoto payload: user_id = \(photoRecord.user_id), url = \(photoRecord.url)")
 
