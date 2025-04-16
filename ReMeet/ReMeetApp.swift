@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 @main
 struct ReMeetApp: App {
@@ -6,9 +7,8 @@ struct ReMeetApp: App {
 
     var body: some Scene {
         WindowGroup {
-            //MainAppView()
             if isLoggedIn {
-                MainAppView() // ← renamed from HomeView
+                MainAppView()
             } else {
                 NavigationView {
                     WelcomeView()

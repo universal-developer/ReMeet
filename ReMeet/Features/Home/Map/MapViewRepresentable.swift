@@ -12,9 +12,7 @@ struct MapViewRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MapView {
         let mapView = controller.mapView
-
-        mapView.ornaments.options.compass.visibility = .hidden
-        mapView.ornaments.options.scaleBar.visibility = .hidden
+        
         mapView.location.options.puckType = nil
 
         context.coordinator.mapView = mapView
@@ -71,7 +69,9 @@ struct MapViewRepresentable: UIViewRepresentable {
             guard let mapView else { return }
 
             let camera = CameraOptions(center: coordinate, zoom: 15)
-            mapView.camera.ease(to: camera, duration: 1.3)
+
+            mapView.camera.fly(to: camera, duration: 1.5, completion: nil)
+
 
             mapView.viewAnnotations.removeAll()
 
@@ -101,6 +101,9 @@ struct MapViewRepresentable: UIViewRepresentable {
                 annotationView = label
             }
 
+            annotationView.alpha = 0
+            annotationView.transform = CGAffineTransform(translationX: 0, y: -20)
+
             let options = ViewAnnotationOptions(
                 geometry: Point(coordinate),
                 width: 50,
@@ -109,7 +112,17 @@ struct MapViewRepresentable: UIViewRepresentable {
                 anchor: .bottom
             )
 
-            try? mapView.viewAnnotations.add(annotationView, options: options)
+            do {
+                try mapView.viewAnnotations.add(annotationView, options: options)
+
+                UIView.animate(withDuration: 0.4, delay: 0.2, options: [.curveEaseOut], animations: {
+                    annotationView.alpha = 1
+                    annotationView.transform = .identity
+                }, completion: nil)
+            } catch {
+                print("❌ Failed to add view annotation: \(error)")
+            }
+
         }
 
         func observeUserImageUpdates(controller: MapController) {

@@ -27,9 +27,11 @@ class MapController: ObservableObject {
     init() {
         let mapInitOptions = MapInitOptions(
             cameraOptions: CameraOptions(zoom: 14),
-            styleURI: .light // MUCH faster and more minimal
+            styleURI: .streets // MUCH faster and more minimal
         )
-        self.mapView = MapView(frame: .zero, mapInitOptions: mapInitOptions)
+        self.mapView = MapView(frame: UIScreen.main.bounds, mapInitOptions: mapInitOptions)
+        self.mapView.ornaments.options.scaleBar.visibility = .hidden
+        self.mapView.ornaments.options.compass.visibility = .hidden
         mapView.location.options.puckType = nil
         mapView.location.options.puckBearingEnabled = true
 
