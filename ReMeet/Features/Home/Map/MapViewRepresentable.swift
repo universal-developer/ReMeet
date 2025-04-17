@@ -9,7 +9,7 @@ import MapboxMaps
 
 struct MapViewRepresentable: UIViewRepresentable {
     @ObservedObject var controller: MapController
-
+    
     func makeUIView(context: Context) -> MapView {
         let mapView = controller.mapView
         
@@ -64,6 +64,23 @@ struct MapViewRepresentable: UIViewRepresentable {
 
         var locationObserver: Cancelable?
         var mapLoadObserver: Cancelable?
+        
+        @objc func handleAnnotationTap() {
+            Task {
+                do {
+                    let session = try await SupabaseManager.shared.client.auth.session
+                    let userId = session.user.id.uuidString
+                    
+                    NotificationCenter.default.post(
+                        name: .didTapUserAnnotation,
+                        object: nil,
+                        userInfo: ["userId": userId]
+                    )
+                } catch {
+                    print("❌ Failed to get session: \(error)")
+                }
+            }
+        }
 
         func centerAndAnnotate(coordinate: CLLocationCoordinate2D, controller: MapController) {
             guard let mapView else { return }
@@ -116,7 +133,11 @@ struct MapViewRepresentable: UIViewRepresentable {
                 allowOverlap: true,
                 anchor: .bottom
             )
-
+            
+            let tap = UITapGestureRecognizer(target: self, action: #selector(self.handleAnnotationTap))
+            annotationView.addGestureRecognizer(tap)
+            annotationView.isUserInteractionEnabled = true
+            
             do {
                 try mapView.viewAnnotations.add(annotationView, options: options)
 
@@ -161,4 +182,8 @@ struct MapViewRepresentable: UIViewRepresentable {
 
 extension Notification.Name {
     static let didUpdateUserImage = Notification.Name("didUpdateUserImage")
+}
+
+extension Notification.Name {
+    static let didTapUserAnnotation = Notification.Name("didTapUserAnnotation")
 }

@@ -51,7 +51,7 @@ class MapController: ObservableObject {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let userId = session.user.id.uuidString
 
-                let profiles: [UserProfile] = try await SupabaseManager.shared.client
+                let profiles: [MapController.UserProfile] = try await SupabaseManager.shared.client
                     .database
                     .from("profiles")
                     .select("first_name")
@@ -59,6 +59,9 @@ class MapController: ObservableObject {
                     .limit(1)
                     .execute()
                     .value
+
+                guard let profile = profiles.first else { return }
+
 
                 if let profile = profiles.first {
                     DispatchQueue.main.async {
@@ -112,7 +115,6 @@ class MapController: ObservableObject {
                     self.userImage = image
                     print("✅ Loaded user photo")
 
-                    NotificationCenter.default.post(name: .didUpdateUserImage, object: nil)
                 }
 
 

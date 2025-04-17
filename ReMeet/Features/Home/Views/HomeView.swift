@@ -9,15 +9,24 @@ import SwiftUI
 import MapboxMaps
 
 struct HomeMapScreen: View {
-    @State private var mapViewRef: MapView? = nil
     @ObservedObject var mapController: MapController
+    
+    @State private var mapViewRef: MapView? = nil
+    @State private var showModal = false
+    @State private var tappedUserId: String?
     
     var body: some View {
         ZStack {
-            MapViewRepresentable(controller: mapController)
-                            .ignoresSafeArea()
-                            .edgesIgnoringSafeArea(.all)
-
+            ZStack(alignment: .bottom) {
+               MapViewRepresentable(controller: mapController)
+                   .ignoresSafeArea()
+                   .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
+                       if let userId = notification.userInfo?["userId"] as? String {
+                           tappedUserId = userId
+                           showModal = true
+                       }
+                   }
+           }
             VStack {
                 HStack(spacing: 12) {
                     // Avatar
@@ -65,8 +74,19 @@ struct HomeMapScreen: View {
 
                 Spacer()
             }
+            
 
         }
+        // ✅ Snapchat-style modal preview
+        .safeAreaInset(edge: .bottom, alignment: .center, spacing: 0) {
+            if showModal, let userId = tappedUserId {
+                FastUserPreviewCard(userId: userId)
+                    .padding(.bottom, 6) // Small spacing from very bottom
+                    .transition(.move(edge: .bottom))
+                    .animation(.spring(), value: showModal)
+            }
+        }
+
     }
 }
 
