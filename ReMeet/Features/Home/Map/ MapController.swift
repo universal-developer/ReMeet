@@ -13,6 +13,7 @@ import Supabase
 class MapController: ObservableObject {
     @Published var userInitials: String? = nil
     var userImage: UIImage? = nil
+    
 
     struct UserPhoto: Decodable {
         let url: String

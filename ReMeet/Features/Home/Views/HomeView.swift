@@ -14,18 +14,24 @@ struct HomeMapScreen: View {
     @State private var mapViewRef: MapView? = nil
     @State private var showModal = false
     @State private var tappedUserId: String?
+    @State private var myUserId: String?
+
     
     var body: some View {
         ZStack {
             ZStack(alignment: .bottom) {
-               MapViewRepresentable(controller: mapController)
-                   .ignoresSafeArea()
-                   .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
-                       if let userId = notification.userInfo?["userId"] as? String {
-                           tappedUserId = userId
-                           showModal = true
-                       }
-                   }
+                if let userId = myUserId {
+                    MapViewRepresentable(controller: mapController, userId: userId)
+                        .ignoresSafeArea()
+                        .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
+                            if let userId = notification.userInfo?["userId"] as? String {
+                                tappedUserId = userId
+                                withAnimation {
+                                    showModal = true
+                                }
+                            }
+                        }
+                }
            }
             VStack {
                 HStack(spacing: 12) {
@@ -78,15 +84,29 @@ struct HomeMapScreen: View {
 
         }
         // ✅ Snapchat-style modal preview
-        .safeAreaInset(edge: .bottom, alignment: .center, spacing: 0) {
-            if showModal, let userId = tappedUserId {
-                FastUserPreviewCard(userId: userId)
-                    .padding(.bottom, 6) // Small spacing from very bottom
-                    .transition(.move(edge: .bottom))
-                    .animation(.spring(), value: showModal)
+        .onAppear {
+            Task {
+                do {
+                    let session = try await SupabaseManager.shared.client.auth.session
+                    myUserId = session.user.id.uuidString
+                } catch {
+                    print("❌ Failed to fetch session: \(error)")
+                }
             }
         }
-
+        .safeAreaInset(edge: .bottom, alignment: .center, spacing: 0) {
+            if showModal, let userId = tappedUserId {
+                FastUserPreviewSheet(userId: userId) {
+                    // Close button action
+                    withAnimation {
+                        showModal = false
+                    }
+                }
+                .transition(.move(edge: .bottom)) // 👈 slide in
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showModal) // 👈 smooth bounce
+                .padding(.bottom, 12)
+            }
+        }
     }
 }
 

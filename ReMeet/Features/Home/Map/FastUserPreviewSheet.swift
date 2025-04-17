@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import Supabase
 
-struct FastUserPreviewCard: View {
+struct FastUserPreviewSheet: View {
     let userId: String
+    var onClose: () -> Void
+
     @State private var userImage: UIImage?
     @State private var firstName: String = ""
 
@@ -19,36 +22,31 @@ struct FastUserPreviewCard: View {
                     .resizable()
                     .frame(width: 48, height: 48)
                     .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 48, height: 48)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(firstName)
                     .font(.headline)
                     .bold()
                 Text("Tap to view profile")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
 
             Spacer()
 
             Button(action: {
-                // Open chat or profile
+                onClose()
             }) {
-                Image(systemName: "ellipsis")
-                    .padding(10)
-                    .background(Color.black.opacity(0.05))
-                    .clipShape(Circle())
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.gray)
+                    .font(.system(size: 20))
             }
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(.ultraThinMaterial)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .padding(.horizontal)
         .onAppear(perform: loadData)
     }
@@ -78,8 +76,7 @@ struct FastUserPreviewCard: View {
                     .execute()
                     .value
 
-                if let urlStr = photos.first?.url,
-                   let url = URL(string: urlStr) {
+                if let urlStr = photos.first?.url, let url = URL(string: urlStr) {
                     let (data, _) = try await URLSession.shared.data(from: url)
                     if let img = UIImage(data: data) {
                         self.userImage = img
