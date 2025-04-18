@@ -8,8 +8,8 @@
 import SwiftUI
   
 struct MainAppView: View {
-    @State private var selectedTab: TabBarItem = .home
-    @StateObject private var mapController = MapController()
+    @State private var selectedTab: TabBarItem = .qr
+    @ObservedObject var mapController: MapController
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,10 +33,16 @@ struct MainAppView: View {
             // Bottom navigation bar
             BottomTabBar(selectedTab: $selectedTab)
         }
+        .onAppear {
+            DispatchQueue.global().async {
+                _ = mapController.mapView
+                mapController.loadUserData()
+            }
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
 #Preview {
-    MainAppView()
+    MainAppView(mapController: MapController())
 }
