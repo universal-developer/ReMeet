@@ -226,18 +226,33 @@ class MapController: ObservableObject {
     }
     
     func recenterOnUser() {
-        if let coordinate = mapView.location.latestLocation?.coordinate {
-            let savedZoom = UserDefaults.standard.double(forKey: "lastZoom")
-            let initialZoom = max(min(savedZoom - 1.0, 16), 11)
-
-            let camera = CameraOptions(center: coordinate, zoom: initialZoom)
-            mapView.camera.ease(to: camera, duration: 1.0, curve: .easeInOut, completion: nil)
-            
-            print("🎯 Recentered on user location with initial zoom: \(initialZoom)")
-        } else {
+        guard let coordinate = mapView.location.latestLocation?.coordinate else {
             print("⚠️ No location available to recenter.")
+            return
         }
+
+        let currentZoom = mapView.mapboxMap.cameraState.zoom
+        let targetZoom = max(currentZoom, 15) // zoom in only if it's lower
+
+        // Step 1: move to location without zooming
+        mapView.camera.ease(
+            to: CameraOptions(center: coordinate),
+            duration: 0.8,
+            curve: .easeOut
+        )
+
+        // Step 2: zoom in (only if needed)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            self.mapView.camera.ease(
+                to: CameraOptions(center: coordinate, zoom: targetZoom),
+                duration: 0.9,
+                curve: .easeInOut
+            )
+        }
+
+        print("🎯 Recentered to user first, then zoomed to \(targetZoom)")
     }
+
 
     
     func zoomInOnUser(_ coordinate: CLLocationCoordinate2D, zoomLevel: CGFloat = 17) {
