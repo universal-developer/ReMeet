@@ -13,14 +13,18 @@ import Supabase
 @MainActor
 class MapController: ObservableObject {
     @Published var userInitials: String? = nil
+    @Published var userFirstName: String? = nil
+    
     private var lastSavedZoom: CGFloat?
 
     var userImage: UIImage? = nil
-    var lastKnownUserLocation: CLLocationCoordinate2D? {
+    
+    private static func readLastKnownUserLocation() -> CLLocationCoordinate2D? {
         let lat = UserDefaults.standard.double(forKey: "lastUserLat")
         let lng = UserDefaults.standard.double(forKey: "lastUserLng")
         return lat != 0 && lng != 0 ? CLLocationCoordinate2D(latitude: lat, longitude: lng) : nil
     }
+
 
     struct UserPhoto: Decodable {
         let url: String
@@ -47,7 +51,7 @@ class MapController: ObservableObject {
         let lastUserLng = UserDefaults.standard.double(forKey: "lastUserLng")
         let hasLastUserCoord = lastUserLat != 0 && lastUserLng != 0
 
-        let userCoord = self.lastKnownUserLocation
+        let userCoord = MapController.readLastKnownUserLocation()
         let initialCamera = userCoord != nil
             ? CameraOptions(center: userCoord, zoom: adjustedZoom)
             : CameraOptions(zoom: 13)
@@ -146,9 +150,11 @@ class MapController: ObservableObject {
                 DispatchQueue.main.async {
                     let initials = String(profile.first_name.prefix(1)).uppercased()
                     self.userInitials = initials
+                    self.userFirstName = profile.first_name // ✅ add this
                     UserDefaults.standard.set(initials, forKey: "cachedInitials")
                     print("🟣 Initials set to: \(initials)")
                 }
+
             } catch {
                 print("❌ Failed to fetch profile initials: \(error)")
             }
@@ -221,15 +227,22 @@ class MapController: ObservableObject {
     
     func recenterOnUser() {
         if let coordinate = mapView.location.latestLocation?.coordinate {
-            let zoom = UserDefaults.standard.double(forKey: "lastZoom")
-            let camera = CameraOptions(center: coordinate, zoom: zoom != 0 ? zoom : 15)
+            let savedZoom = UserDefaults.standard.double(forKey: "lastZoom")
+            let initialZoom = max(min(savedZoom - 1.0, 16), 11)
+
+            let camera = CameraOptions(center: coordinate, zoom: initialZoom)
             mapView.camera.ease(to: camera, duration: 1.0, curve: .easeInOut, completion: nil)
-            print("🎯 Recentered on user location")
+            
+            print("🎯 Recentered on user location with initial zoom: \(initialZoom)")
         } else {
             print("⚠️ No location available to recenter.")
         }
     }
 
-
+    
+    func zoomInOnUser(_ coordinate: CLLocationCoordinate2D, zoomLevel: CGFloat = 17) {
+        let options = CameraOptions(center: coordinate, zoom: zoomLevel)
+        mapView.camera.ease(to: options, duration: 1.0, curve: .easeInOut, completion: nil)
+    }
 
 }

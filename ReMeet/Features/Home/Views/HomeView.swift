@@ -16,22 +16,35 @@ import SwiftUI
 import MapboxMaps
 
 struct HomeMapScreen: View {
+    @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
+    
     @ObservedObject var mapController: MapController
 
     @State private var myUserId: String?
     @State private var tappedUserId: String?
     @State private var showModal = false
+    @State private var mapIsVisible = false
+    @State private var isFirstLoad = true
+    @State private var mapIsReady = false
     //@State private var sliderVisible = true
+    
     @GestureState private var dragOffset: CGSize = .zero
 
     var body: some View {
         ZStack {
             // Prevent white flash on startup
-            Color(.systemBackground).ignoresSafeArea()
+            if isFirstLoad {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .animation(.easeOut(duration: 0.5), value: mapIsReady)
+            }
+
                 // Map layer
             if let userId = myUserId {
                 MapViewRepresentable(controller: mapController, userId: userId)
                     .ignoresSafeArea()
+                    .opacity((hasLoadedMapOnce || mapIsVisible) ? 1 : 0)
                     .onAppear {
                         // Eagerly load initials + photo
                         mapController.loadUserDataEagerly()
@@ -44,6 +57,15 @@ struct HomeMapScreen: View {
                             }
                         }
                     }
+
+                    .onReceive(NotificationCenter.default.publisher(for: .mapDidBecomeVisible)) { _ in
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            mapIsVisible = true
+                            isFirstLoad = false
+                            hasLoadedMapOnce = true // ✅ Mark it as loaded so we skip fade next time
+                        }
+                    }
+
             } /*else {
                 // Optional loading indicator while fetching user session
                 ProgressView()
@@ -116,11 +138,16 @@ struct HomeMapScreen: View {
         // Snapchat-style bottom modal
         .safeAreaInset(edge: .bottom, alignment: .center, spacing: 0) {
             if showModal, let userId = tappedUserId {
-                FastUserPreviewSheet(userId: userId) {
-                    withAnimation {
-                        showModal = false
+                FastUserPreviewSheet(
+                    userId: userId,
+                    initialFirstName: mapController.userFirstName,
+                    profileImage: mapController.userImage,
+                    onClose: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showModal = false
+                        }
                     }
-                }
+                )
                 .transition(.move(edge: .bottom))
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showModal)
                 .padding(.bottom, 12)
@@ -131,7 +158,7 @@ struct HomeMapScreen: View {
                         }
                         .onEnded { value in
                             if value.translation.height > 80 {
-                                withAnimation {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                     showModal = false
                                 }
                             }
@@ -139,6 +166,7 @@ struct HomeMapScreen: View {
                 )
             }
         }
+
     }
 
     private var headerView: some View {

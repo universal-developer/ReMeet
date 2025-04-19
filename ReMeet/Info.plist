@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to show nearby connections and events</string>
 	<key>MBXAccessToken</key>
 	<string>pk.eyJ1IjoiYXJ0dXNoaCIsImEiOiJjbTllOWU5YnowOGR3MnJzY2dyemJ4MHh4In0.AkHp55ymjtH74d4Ziunb_g</string>
 </dict>
