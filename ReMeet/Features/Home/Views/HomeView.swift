@@ -5,13 +5,6 @@
 //  Created by Artush on 10/04/2025.
 //
 
-//
-//  HomeMapScreen.swift
-//  ReMeet
-//
-//  Created by Artush on 10/04/2025.
-//
-
 import SwiftUI
 import MapboxMaps
 
@@ -26,6 +19,9 @@ struct HomeMapScreen: View {
     @State private var mapIsVisible = false
     @State private var isFirstLoad = true
     @State private var mapIsReady = false
+    @State private var tappedUserName: String? = nil
+    @State private var tappedUserPhotoURL: String? = nil
+
     //@State private var sliderVisible = true
     
     @GestureState private var dragOffset: CGSize = .zero
@@ -52,11 +48,14 @@ struct HomeMapScreen: View {
                     .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
                         if let userId = notification.userInfo?["userId"] as? String {
                             tappedUserId = userId
+                            tappedUserName = notification.userInfo?["firstName"] as? String
+                            tappedUserPhotoURL = notification.userInfo?["photoURL"] as? String
                             withAnimation {
                                 showModal = true
                             }
                         }
                     }
+
 
                     .onReceive(NotificationCenter.default.publisher(for: .mapDidBecomeVisible)) { _ in
                         withAnimation(.easeOut(duration: 0.5)) {
@@ -140,8 +139,8 @@ struct HomeMapScreen: View {
             if showModal, let userId = tappedUserId {
                 FastUserPreviewSheet(
                     userId: userId,
-                    initialFirstName: mapController.userFirstName,
-                    profileImage: mapController.userImage,
+                    initialFirstName: tappedUserName,
+                    profileImage: cachedImage(from: tappedUserPhotoURL),
                     onClose: {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             showModal = false
@@ -218,6 +217,17 @@ struct HomeMapScreen: View {
             Spacer()
         }
     }
+    
+    func cachedImage(from urlStr: String?) -> UIImage? {
+        guard let urlStr = urlStr,
+              let url = URL(string: urlStr),
+              let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else {
+            return nil
+        }
+        return image
+    }
+
 
     /*private func startAutoHideTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {

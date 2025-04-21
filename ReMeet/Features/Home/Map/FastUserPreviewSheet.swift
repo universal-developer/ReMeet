@@ -10,9 +10,16 @@ import Supabase
 
 struct FastUserPreviewSheet: View {
     let userId: String
-    let initialFirstName: String?
-    let profileImage: UIImage?
-    var onClose: () -> Void
+        let initialFirstName: String?
+        let profileImage: UIImage?
+        var onClose: () -> Void
+
+        init(userId: String, initialFirstName: String? = nil, profileImage: UIImage? = nil, onClose: @escaping () -> Void) {
+            self.userId = userId
+            self.initialFirstName = initialFirstName
+            self.profileImage = profileImage
+            self.onClose = onClose
+        }
 
     @State private var userImage: UIImage?
     @State private var firstName: String = ""

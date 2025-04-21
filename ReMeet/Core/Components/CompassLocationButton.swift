@@ -8,7 +8,7 @@
 //  CompassLocationButton.swift
 //  ReMeet
 
-import SwiftUI
+/*import SwiftUI
 import MapboxMaps
 
 struct CompassLocationButton: View {
@@ -42,3 +42,4 @@ struct CompassLocationButton: View {
         }
     }
 }
+*/

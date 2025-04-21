@@ -31,6 +31,11 @@ struct MapViewRepresentable: UIViewRepresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 controller.loadUserDataEagerly()
             }
+            
+            // 🧠 🔥 Add this line to load friends on map
+            Task {
+                await controller.fetchFriendsAndShowOnMap()
+            }
         }
 
         context.coordinator.locationObserver = mapView.location.onLocationChange.observe { locations in
@@ -83,6 +88,51 @@ struct MapViewRepresentable: UIViewRepresentable {
 
             NotificationCenter.default.post(name: .didTapUserAnnotation, object: nil, userInfo: ["userId": userId])
         }
+        
+        @objc func friendAnnotationTapped(_ sender: UITapGestureRecognizer) {
+            guard let view = sender.view,
+                  let friendId = view.accessibilityIdentifier else { return }
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleFriendMetadata(_:)),
+                name: .didLoadFriendMetadata,
+                object: nil
+            )
+        }
+        
+        @objc func handleFriendMetadata(_ notification: Notification) {
+            guard let friends = notification.userInfo?["friends"] as? [MapController.Friend] else { return }
+
+            for friend in friends {
+                guard let lat = friend.latitude, let lng = friend.longitude else { continue }
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+
+                DispatchQueue.main.async {
+                    let annotationView = AnnotationFactory.makeAnnotationView(
+                        initials: String(friend.first_name.prefix(1)).uppercased(),
+                        image: nil, // preload if needed
+                        userId: friend.friend_id,
+                        target: self,
+                        action: #selector(self.handleAnnotationTap(_:))
+                    )
+
+                    let options = ViewAnnotationOptions(
+                        geometry: Point(coordinate),
+                        width: 50,
+                        height: 50,
+                        allowOverlap: true,
+                        anchor: .bottom
+                    )
+
+                    do {
+                        try self.mapView?.viewAnnotations.add(annotationView, options: options)
+                    } catch {
+                        print("❌ Error adding friend annotation: \(error)")
+                    }
+                }
+            }
+        }
+
 
         @objc func handleZoomOnUser(_ notification: Notification) {
                 guard let coord = notification.userInfo?["coordinate"] as? CLLocationCoordinate2D else { return }
@@ -119,9 +169,6 @@ struct MapViewRepresentable: UIViewRepresentable {
             let storedZoom = UserDefaults.standard.double(forKey: "lastZoom")
             let finalZoom: CGFloat = storedZoom != 0 ? storedZoom : 15
 
-            // ✅ Clean single zoom-in (no zoom out)
-            //mapView.camera.fly(to: CameraOptions(center: coordinate, zoom: finalZoom), duration: 1.2)
-
             mapView.viewAnnotations.removeAll()
 
             Task { [weak self] in
@@ -131,35 +178,13 @@ struct MapViewRepresentable: UIViewRepresentable {
                 let initials = await MainActor.run { controller.userInitials }
 
                 DispatchQueue.main.async {
-                    let annotationView: UIView
-                    if let image = image {
-                        let imageView = UIImageView(image: image)
-                        imageView.frame = CGRect(x: 0, y: 0, width: 50, height: 50)
-                        imageView.contentMode = .scaleAspectFill
-                        imageView.layer.cornerRadius = 25
-                        imageView.layer.borderWidth = 2
-                        imageView.layer.borderColor = UIColor.white.cgColor
-                        imageView.clipsToBounds = true
-                        annotationView = imageView
-                    } else {
-                        let label = UILabel()
-                        label.text = initials ?? "?"
-                        label.textColor = .white
-                        label.textAlignment = .center
-                        label.font = .boldSystemFont(ofSize: 22)
-                        label.backgroundColor = .systemBlue
-                        label.layer.cornerRadius = 25
-                        label.layer.borderWidth = 2
-                        label.layer.borderColor = UIColor.white.cgColor
-                        label.clipsToBounds = true
-                        label.frame = CGRect(x: 0, y: 0, width: 50, height: 50)
-                        annotationView = label
-                    }
-
-                    annotationView.accessibilityIdentifier = userId
-                    annotationView.isUserInteractionEnabled = true
-                    let tap = UITapGestureRecognizer(target: self, action: #selector(self.handleAnnotationTap(_:)))
-                    annotationView.addGestureRecognizer(tap)
+                    let annotationView = AnnotationFactory.makeAnnotationView(
+                        initials: initials,
+                        image: image,
+                        userId: userId,
+                        target: self,
+                        action: #selector(self.handleAnnotationTap(_:))
+                    )
 
                     let options = ViewAnnotationOptions(
                         geometry: Point(coordinate),
@@ -170,14 +195,15 @@ struct MapViewRepresentable: UIViewRepresentable {
                     )
 
                     do {
-                       try self.mapView?.viewAnnotations.add(annotationView, options: options)
-                       NotificationCenter.default.post(name: .mapDidBecomeVisible, object: nil) // ✅ Fade in after annotation
-                   } catch {
-                       print("❌ Failed to add annotation: \(error)")
-                   }
+                        try mapView.viewAnnotations.add(annotationView, options: options)
+                        NotificationCenter.default.post(name: .mapDidBecomeVisible, object: nil)
+                    } catch {
+                        print("❌ Failed to add annotation: \(error)")
+                    }
                 }
             }
         }
+
 
 
         deinit {
@@ -191,3 +217,4 @@ extension Notification.Name {
     static let didTapUserAnnotation = Notification.Name("didTapUserAnnotation")
     static let zoomOnUser = Notification.Name("zoomOnUser")
 }
+
