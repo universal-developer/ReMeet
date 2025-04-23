@@ -9,7 +9,8 @@ import SwiftUI
   
 struct MainAppView: View {
     @State private var selectedTab: TabBarItem = .qr
-    @ObservedObject var mapController: MapController
+    var orchestrator: MapOrchestrator
+
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,7 +18,7 @@ struct MainAppView: View {
             ZStack {
                 switch selectedTab {
                 case .home:
-                    HomeMapScreen(mapController: mapController)
+                    HomeMapScreen(orchestrator: orchestrator)
                 case .explore:
                     ExploreView()
                 case .qr:
@@ -35,14 +36,13 @@ struct MainAppView: View {
         }
         .onAppear {
             DispatchQueue.global().async {
-                _ = mapController.mapView
-                mapController.loadUserData()
+                _ = orchestrator.mapController.mapView
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
-#Preview {
+/*#Preview {
     MainAppView(mapController: MapController())
-}
+}*/

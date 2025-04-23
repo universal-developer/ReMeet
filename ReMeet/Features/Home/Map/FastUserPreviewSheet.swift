@@ -83,7 +83,7 @@ struct FastUserPreviewSheet: View {
     func loadData() {
         Task {
             do {
-                let profiles: [MapController.UserProfile] = try await SupabaseManager.shared.client
+                let profiles: [UserProfile] = try await SupabaseManager.shared.client
                     .database
                     .from("profiles")
                     .select("first_name")
@@ -95,7 +95,7 @@ struct FastUserPreviewSheet: View {
                 guard let profile = profiles.first else { return }
                 self.firstName = profile.first_name
 
-                let photos: [MapController.UserPhoto] = try await SupabaseManager.shared.client
+                let photos: [UserPhoto] = try await SupabaseManager.shared.client
                     .database
                     .from("user_photos")
                     .select("url")
@@ -117,3 +117,12 @@ struct FastUserPreviewSheet: View {
         }
     }
 }
+
+private struct UserProfile: Decodable {
+    let first_name: String
+}
+
+private struct UserPhoto: Decodable {
+    let url: String
+}
+

@@ -11,8 +11,6 @@ import MapboxMaps
 struct HomeMapScreen: View {
     @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
     
-    @ObservedObject var mapController: MapController
-
     @State private var myUserId: String?
     @State private var tappedUserId: String?
     @State private var showModal = false
@@ -25,6 +23,8 @@ struct HomeMapScreen: View {
     //@State private var sliderVisible = true
     
     @GestureState private var dragOffset: CGSize = .zero
+    
+    var orchestrator: MapOrchestrator
 
     var body: some View {
         ZStack {
@@ -38,12 +38,11 @@ struct HomeMapScreen: View {
 
                 // Map layer
             if let userId = myUserId {
-                MapViewRepresentable(controller: mapController, userId: userId)
+                MapViewRepresentable(controller: orchestrator.mapController)
                     .ignoresSafeArea()
                     .opacity((hasLoadedMapOnce || mapIsVisible) ? 1 : 0)
                     .onAppear {
                         // Eagerly load initials + photo
-                        mapController.loadUserDataEagerly()
                     }
                     .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
                         if let userId = notification.userInfo?["userId"] as? String {
@@ -98,7 +97,7 @@ struct HomeMapScreen: View {
                 HStack() {
 
                     Button(action: {
-                        mapController.recenterOnUser()
+                        orchestrator.mapController.recenterOnUser()
                     }) {
                         Image(systemName: "location.fill")
                             .font(.system(size: 18, weight: .medium))
@@ -237,6 +236,9 @@ struct HomeMapScreen: View {
         }
     }*/
 }
+
+
+
 
 /*#Preview {
     HomeMapScreen(mapController: MapController())

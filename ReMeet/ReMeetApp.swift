@@ -3,13 +3,14 @@ import SwiftUI
 @main
 struct ReMeetApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
-    @StateObject private var mapController = MapController()
+    @StateObject var orchestrator = MapOrchestrator()
+
 
     var body: some Scene {
         WindowGroup {
             //MainAppView()
             if isLoggedIn {
-                MainAppView(mapController: mapController) // ← renamed from HomeView
+                MainAppView(orchestrator: orchestrator)
             } else {
                 NavigationView {
                     WelcomeView()
