@@ -20,6 +20,8 @@ struct HomeMapScreen: View {
     @State private var tappedUserName: String? = nil
     @State private var tappedUserPhotoURL: String? = nil
     @State private var tappedPreviewImage: UIImage? = nil
+    @State private var tappedUserImage: UIImage? = nil
+    @State private var tappedFriend: FriendLocationManager.Friend?
 
 
     //@State private var sliderVisible = true
@@ -47,19 +49,24 @@ struct HomeMapScreen: View {
                         // Eagerly load initials + photo
                     }
                     .onReceive(NotificationCenter.default.publisher(for: .didTapUserAnnotation)) { notification in
-                        if let userId = notification.userInfo?["userId"] as? String {
-                            tappedUserId = userId
-                            tappedUserName = notification.userInfo?["firstName"] as? String
-                            tappedUserPhotoURL = notification.userInfo?["photoURL"] as? String
+                        guard let friend = notification.userInfo?["friend"] as? FriendLocationManager.Friend else {
+                            print("⚠️ Invalid tap payload")
+                            return
+                        }
 
-                            Task {
-                                tappedPreviewImage = await cachedImage(from: tappedUserPhotoURL)
-                                withAnimation {
-                                    showModal = true
-                                }
+                        tappedUserId = friend.friend_id
+                        tappedUserName = friend.first_name
+                        tappedUserPhotoURL = friend.photo_url
+
+                        Task {
+                            tappedPreviewImage = await cachedImage(from: friend.photo_url)
+                            withAnimation {
+                                showModal = true
                             }
                         }
                     }
+
+
 
 
 

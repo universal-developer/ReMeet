@@ -107,9 +107,7 @@ final class MapOrchestrator: ObservableObject {
             name: .didTapUserAnnotation,
             object: nil,
             userInfo: [
-                "userId": friend.friend_id,
-                "firstName": friend.first_name,
-                "photoURL": friend.photo_url ?? ""
+                "friend": friend  // 👈 pass whole friend
             ]
         )
     }
