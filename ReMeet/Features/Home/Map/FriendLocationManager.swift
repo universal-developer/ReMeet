@@ -43,7 +43,7 @@ final class FriendLocationManager: ObservableObject {
             print("❌ Failed to fetch initial friends: \(error)")
         }
     }
-
+    
     func listenForLiveUpdates(onUpdate: @escaping (String, CLLocationCoordinate2D) -> Void) {
         let channel = SupabaseManager.shared.client.realtimeV2.channel("public:user_locations")
         let updates = channel.postgresChange(UpdateAction.self, table: "user_locations")

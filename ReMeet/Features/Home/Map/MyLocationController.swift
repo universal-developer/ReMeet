@@ -68,8 +68,9 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
 
             try await SupabaseManager.shared.client
                 .from("user_locations")
-                .upsert(payload)
+                .upsert(payload, returning: .minimal)
                 .execute()
+
 
             print("✅ Uploaded live location: \(coordinate.latitude), \(coordinate.longitude)")
         } catch {

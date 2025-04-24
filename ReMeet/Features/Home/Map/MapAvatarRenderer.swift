@@ -22,7 +22,7 @@ final class MapAvatarRenderer {
         image: UIImage?,
         target: Any,
         tapAction: Selector
-    ) {
+    ) -> UIView? {
         let initials = String(user.name.prefix(1)).uppercased()
 
         let annotationView = AnnotationFactory.makeAnnotationView(
@@ -43,10 +43,13 @@ final class MapAvatarRenderer {
 
         do {
             try mapView.viewAnnotations.add(annotationView, options: options)
+            return annotationView
         } catch {
             print("❌ Failed to render avatar for \(user.id): \(error)")
+            return nil
         }
     }
+
 
     static func update(
         on mapView: MapView,

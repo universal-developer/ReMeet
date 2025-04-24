@@ -19,6 +19,8 @@ struct HomeMapScreen: View {
     @State private var mapIsReady = false
     @State private var tappedUserName: String? = nil
     @State private var tappedUserPhotoURL: String? = nil
+    @State private var tappedPreviewImage: UIImage? = nil
+
 
     //@State private var sliderVisible = true
     
@@ -38,7 +40,7 @@ struct HomeMapScreen: View {
 
                 // Map layer
             if let userId = myUserId {
-                MapViewRepresentable(controller: orchestrator.mapController)
+                MapViewRepresentable(orchestrator: orchestrator)
                     .ignoresSafeArea()
                     .opacity((hasLoadedMapOnce || mapIsVisible) ? 1 : 0)
                     .onAppear {
@@ -49,11 +51,16 @@ struct HomeMapScreen: View {
                             tappedUserId = userId
                             tappedUserName = notification.userInfo?["firstName"] as? String
                             tappedUserPhotoURL = notification.userInfo?["photoURL"] as? String
-                            withAnimation {
-                                showModal = true
+
+                            Task {
+                                tappedPreviewImage = await cachedImage(from: tappedUserPhotoURL)
+                                withAnimation {
+                                    showModal = true
+                                }
                             }
                         }
                     }
+
 
 
                     .onReceive(NotificationCenter.default.publisher(for: .mapDidBecomeVisible)) { _ in
@@ -139,7 +146,7 @@ struct HomeMapScreen: View {
                 FastUserPreviewSheet(
                     userId: userId,
                     initialFirstName: tappedUserName,
-                    profileImage: cachedImage(from: tappedUserPhotoURL),
+                    profileImage: tappedPreviewImage,
                     onClose: {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             showModal = false
@@ -217,15 +224,21 @@ struct HomeMapScreen: View {
         }
     }
     
-    func cachedImage(from urlStr: String?) -> UIImage? {
+    func cachedImage(from urlStr: String?) async -> UIImage? {
         guard let urlStr = urlStr,
-              let url = URL(string: urlStr),
-              let data = try? Data(contentsOf: url),
-              let image = UIImage(data: data) else {
+              let url = URL(string: urlStr) else {
             return nil
         }
-        return image
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return UIImage(data: data)
+        } catch {
+            print("⚠️ Failed to load image: \(error)")
+            return nil
+        }
     }
+
 
 
     /*private func startAutoHideTimer() {

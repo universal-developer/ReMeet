@@ -22,15 +22,21 @@ final class MapOrchestrator: ObservableObject {
 
     init() {
         Task.detached(priority: .background) {
-            await self.friendManager.fetchInitialFriends()
+           await self.friendManager.fetchInitialFriends()
+           await self.renderInitialFriendPins() // ✅ Renders pins once data is loaded
+           }
+
+           // Realtime updates
+           friendManager.listenForLiveUpdates { [weak self] userId, coordinate in
+               Task { @MainActor in
+                   self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
+               }
+           }
+        
+        Task {
+            await self.renderInitialFriendPins()
         }
 
-        // Subscribe to live updates of friend positions
-        friendManager.listenForLiveUpdates { [weak self] userId, coordinate in
-            Task { @MainActor in
-                self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
-            }
-        }
     }
 
     // MARK: - Render or Update Friend Pins
@@ -48,10 +54,13 @@ final class MapOrchestrator: ObservableObject {
             Task.detached(priority: .background) {
                 var image: UIImage? = nil
 
-                if let urlStr = friend.photo_url, let url = URL(string: urlStr),
-                   let data = try? Data(contentsOf: url),
-                   let img = UIImage(data: data) {
-                    image = img
+                if let urlStr = friend.photo_url, let url = URL(string: urlStr) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        image = UIImage(data: data)
+                    } catch {
+                        print("⚠️ Failed to load friend photo: \(error)")
+                    }
                 }
 
                 let pin = UserPinData(
@@ -61,18 +70,32 @@ final class MapOrchestrator: ObservableObject {
                     coordinate: coordinate
                 )
 
-                DispatchQueue.main.async {
-                    MapAvatarRenderer.render(
+                await MainActor.run {
+                    if let rendered = MapAvatarRenderer.render(
                         on: mapView,
                         user: pin,
                         image: image,
                         target: self,
                         tapAction: #selector(self.handleTap(_:))
-                    )
+                    ) {
+                        self.annotationCache[userId] = rendered
+                    }
                 }
             }
         }
     }
+    
+    func renderInitialFriendPins() async {
+        for (id, friend) in self.friendManager.friends {
+            guard let lat = friend.latitude, let lng = friend.longitude else { continue }
+            let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+            await MainActor.run {
+                self.handleFriendLocationUpdate(userId: id, coordinate: coord)
+            }
+        }
+    }
+
+
 
     // MARK: - Tap Handler
     @objc private func handleTap(_ sender: UITapGestureRecognizer) {

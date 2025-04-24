@@ -12,6 +12,8 @@ import UIKit
 
 @MainActor
 final class MapController: ObservableObject {
+    @Published var userImage: UIImage? = nil
+    @Published var userInitials: String? = nil
     let mapView: MapView
     private var lastSavedZoom: CGFloat?
 
