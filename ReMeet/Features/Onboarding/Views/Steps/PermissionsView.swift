@@ -19,7 +19,7 @@ struct PermissionsView: View {
         case location
         case notifications
     }
-
+    
     var body: some View {
         VStack(spacing: 30) {
             Spacer()

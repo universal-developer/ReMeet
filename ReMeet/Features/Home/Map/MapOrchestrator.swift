@@ -103,13 +103,21 @@ final class MapOrchestrator: ObservableObject {
               let friendId = view.accessibilityIdentifier,
               let friend = friendManager.friends[friendId] else { return }
 
+        // Post notification to open the modal
         NotificationCenter.default.post(
             name: .didTapUserAnnotation,
             object: nil,
-            userInfo: [
-                "friend": friend  // 👈 pass whole friend
-            ]
+            userInfo: ["friend": friend]
+        )
+
+        // 🌟 Smoothly zoom into the tapped friend's location
+        let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
+        mapController.mapView.camera.ease(
+            to: CameraOptions(center: coordinate, zoom: 17),
+            duration: 1.0,
+            curve: .easeInOut
         )
     }
+
 }
 

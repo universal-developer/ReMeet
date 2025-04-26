@@ -7,6 +7,7 @@
 
 import Foundation
 import MapboxMaps
+import MapboxCoreMaps
 import CoreLocation
 import UIKit
 
@@ -37,6 +38,8 @@ final class MapController: ObservableObject {
 
         self.mapView.ornaments.options.scaleBar.visibility = .hidden
         self.mapView.ornaments.options.compass.visibility = .hidden
+        
+        
         self.mapView.location.options.puckType = nil
         self.mapView.location.options.puckBearingEnabled = true
 
@@ -76,6 +79,15 @@ final class MapController: ObservableObject {
     }
 
     func recenterOnUser() {
+        if CLLocationManager.authorizationStatus() == .notDetermined {
+            // 📍 User hasn't been asked yet -> request now
+            let manager = CLLocationManager()
+            manager.requestWhenInUseAuthorization()
+            
+            print("🛎️ Requesting location permission...")
+            return
+        }
+        
         guard let coordinate = mapView.location.latestLocation?.coordinate else {
             print("⚠️ No location available to recenter.")
             return
@@ -92,6 +104,7 @@ final class MapController: ObservableObject {
 
         print("🎯 Recentered to user first, then zoomed to \(targetZoom)")
     }
+
 
     func removeAllAnnotations() {
         mapView.viewAnnotations.removeAll()
