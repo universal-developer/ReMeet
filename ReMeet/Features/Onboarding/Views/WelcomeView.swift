@@ -14,6 +14,8 @@ struct WelcomeView: View {
     
     @State private var path: [OnboardingRoute] = []
     
+    var orchestrator: MapOrchestrator
+    
     var body: some View {
         NavigationStack(path: $path) {
             VStack {
@@ -70,7 +72,7 @@ struct WelcomeView: View {
                 case .onboarding:
                     OnboardingContainerView()
                 case .qrScan:
-                    QRHubView()
+                    QRTabScreen(orchestrator: orchestrator)
                 }
             }
             .navigationBarHidden(true)
@@ -101,6 +103,3 @@ enum OnboardingRoute: Hashable {
     case qrScan
 }
 
-#Preview {
-    WelcomeView()
-}

@@ -13,7 +13,7 @@ struct ReMeetApp: App {
                 MainAppView(orchestrator: orchestrator)
             } else {
                 NavigationView {
-                    WelcomeView()
+                    WelcomeView(orchestrator: orchestrator)
                 }
             }
         }

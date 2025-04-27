@@ -4,5 +4,7 @@
 <dict>
 	<key>MBXAccessToken</key>
 	<string>pk.eyJ1IjoiYXJ0dXNoaCIsImEiOiJjbTllOWU5YnowOGR3MnJzY2dyemJ4MHh4In0.AkHp55ymjtH74d4Ziunb_g</string>
+	<key>NSCameraReactionEffectGesturesEnabledDefault</key>
+	<true/>
 </dict>
 </plist>

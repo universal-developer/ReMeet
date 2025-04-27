@@ -22,7 +22,7 @@ struct MainAppView: View {
                 case .explore:
                     ExploreView()
                 case .qr:
-                    QRHubView()
+                    QRTabScreen(orchestrator: orchestrator)
                 case .messages:
                     MessagesView()
                 case .profile:
