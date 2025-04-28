@@ -58,7 +58,7 @@ struct FastUserPreviewSheet: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
+            .background(Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(.horizontal)
             .onAppear {

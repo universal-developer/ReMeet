@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import QRCode
 
 struct QRTabScreen: View {
     @State private var selectedTab: Tab = .myCode
@@ -52,7 +53,6 @@ struct QRTabScreen: View {
 
             Button(action: { withAnimation { selectedTab = .myCode } }) {
                 Text("My QR Code")
-                    .fontWeight(selectedTab == .myCode ? .bold : .regular)
                     .foregroundColor(selectedTab == .myCode ? .primary : .gray)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
@@ -66,6 +66,41 @@ struct QRTabScreen: View {
 
     private var myQRCodeCard: some View {
         VStack {
+            Spacer()
+            
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                                    
+                VStack {
+                    if let qr = myQRCodeImage {
+                        Image(uiImage: qr)
+                            .resizable()
+                            .interpolation(.none)
+                            .scaledToFit()
+                            .frame(width: 200, height: 200)
+                            .padding(.top, 10)
+                    } else {
+                        ProgressView()
+                            .onAppear(perform: generateMyQRCode)
+                            .padding()
+                    }
+                }
+            }
+            .frame(width: 300, height: 300)
+            .padding(.horizontal)
+            .padding(.top, 40)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+
+    
+
+
+        
+        /*VStack {
             Spacer()
 
             ZStack {
@@ -138,7 +173,7 @@ struct QRTabScreen: View {
                 .padding(.top, 10)
 
             Spacer()
-        }
+        }*/
     }
 
     private func generateMyQRCode() {
@@ -146,12 +181,23 @@ struct QRTabScreen: View {
             do {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let userId = session.user.id.uuidString
-                myQRCodeImage = QRCodeGenerator.generateQRCode(from: userId)
+                let link = "https://api.remeet.app/u/\(userId)"
+                
+                print("🔗 QR code link: \(link)")
+                
+                myQRCodeImage = QRCodeService.generate(
+                    from: link,
+                    foregroundColor: .black,
+                    backgroundColor: .white,
+                    logo: UIImage(named: "Logo") // optional
+                )
             } catch {
                 print("❌ Failed to get user session for QR code generation: \(error)")
             }
         }
     }
+
+
 
     private func handleScannedQRCode(_ value: String) {
         print("📸 Scanned QR Code: \(value)")
@@ -176,4 +222,8 @@ struct QRTabScreen: View {
             }
         }
     }
+}
+
+#Preview {
+    QRTabScreen(orchestrator: MapOrchestrator())
 }
