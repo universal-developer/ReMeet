@@ -21,8 +21,6 @@
 		4B95D5D22D89E59F00AA1D22 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D12D89E59F00AA1D22 /* Realtime */; };
 		4B95D5D42D89E59F00AA1D22 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4B95D5D32D89E59F00AA1D22 /* Storage */; };
 		4BAF9C852DBEFFF600CB364D /* QRCode in Frameworks */ = {isa = PBXBuildFile; productRef = 4BAF9C842DBEFFF600CB364D /* QRCode */; };
-		4BAF9C872DBEFFF600CB364D /* QRCodeDetector in Frameworks */ = {isa = PBXBuildFile; productRef = 4BAF9C862DBEFFF600CB364D /* QRCodeDetector */; };
-		4BAF9C8B2DBEFFF600CB364D /* QRCodeStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 4BAF9C8A2DBEFFF600CB364D /* QRCodeStatic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,7 +82,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4BAF9C872DBEFFF600CB364D /* QRCodeDetector in Frameworks */,
 				4B4552822DAA94FE006AB02C /* PhoneNumberKit in Frameworks */,
 				4B4552732DAA92AC006AB02C /* PostgREST in Frameworks */,
 				4BAF9C852DBEFFF600CB364D /* QRCode in Frameworks */,
@@ -93,7 +90,6 @@
 				4B45526F2DAA92AC006AB02C /* Auth in Frameworks */,
 				4B4552802DAA9475006AB02C /* Supabase in Frameworks */,
 				4B4552772DAA92AC006AB02C /* Storage in Frameworks */,
-				4BAF9C8B2DBEFFF600CB364D /* QRCodeStatic in Frameworks */,
 				4B4552752DAA92AC006AB02C /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -177,9 +173,6 @@
 				4B4552812DAA94FE006AB02C /* PhoneNumberKit */,
 				4B22B7BB2DADC1E70069F74B /* MapboxMaps */,
 				4BAF9C842DBEFFF600CB364D /* QRCode */,
-				4BAF9C862DBEFFF600CB364D /* QRCodeDetector */,
-				4BAF9C882DBEFFF600CB364D /* QRCodeDynamic */,
-				4BAF9C8A2DBEFFF600CB364D /* QRCodeStatic */,
 			);
 			productName = ReMeet;
 			productReference = 4B1363A52D4CC44E000B21B0 /* ReMeet.app */;
@@ -746,21 +739,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4BAF9C832DBEFFF600CB364D /* XCRemoteSwiftPackageReference "QRCode" */;
 			productName = QRCode;
-		};
-		4BAF9C862DBEFFF600CB364D /* QRCodeDetector */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4BAF9C832DBEFFF600CB364D /* XCRemoteSwiftPackageReference "QRCode" */;
-			productName = QRCodeDetector;
-		};
-		4BAF9C882DBEFFF600CB364D /* QRCodeDynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4BAF9C832DBEFFF600CB364D /* XCRemoteSwiftPackageReference "QRCode" */;
-			productName = QRCodeDynamic;
-		};
-		4BAF9C8A2DBEFFF600CB364D /* QRCodeStatic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4BAF9C832DBEFFF600CB364D /* XCRemoteSwiftPackageReference "QRCode" */;
-			productName = QRCodeStatic;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -42,6 +42,3 @@ struct FirstNameStepView: View {
     }
 }
 
-#Preview {
-    FirstNameStepView(model: OnboardingModel())
-}

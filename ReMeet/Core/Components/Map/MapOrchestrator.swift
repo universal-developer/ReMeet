@@ -12,31 +12,35 @@ import SwiftUI
 
 @MainActor
 final class MapOrchestrator: ObservableObject {
+    // MARK: - Dependencies
+    let profileStore: ProfileStore
+
     // MARK: - Core Modules
     let mapController = MapController()
-    let locationController = MyLocationController()
+    let locationController: MyLocationController
     let friendManager = FriendLocationManager()
 
     // MARK: - Friend Annotations Cache
     private var annotationCache: [String: UIView] = [:]
 
-    init() {
-        Task.detached(priority: .background) {
-           await self.friendManager.fetchInitialFriends()
-           await self.renderInitialFriendPins() // ✅ Renders pins once data is loaded
-           }
+    init(profileStore: ProfileStore) {
+        self.profileStore = profileStore
+        self.locationController = MyLocationController(profileStore: profileStore)
 
-           // Realtime updates
-           friendManager.listenForLiveUpdates { [weak self] userId, coordinate in
-               Task { @MainActor in
-                   self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
-               }
-           }
-        
-        Task {
+        Task.detached(priority: .background) {
+            await self.friendManager.fetchInitialFriends()
             await self.renderInitialFriendPins()
         }
 
+        friendManager.listenForLiveUpdates { [weak self] userId, coordinate in
+            Task { @MainActor in
+                self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
+            }
+        }
+
+        Task {
+            await self.renderInitialFriendPins()
+        }
     }
 
     // MARK: - Render or Update Friend Pins
@@ -84,7 +88,7 @@ final class MapOrchestrator: ObservableObject {
             }
         }
     }
-    
+
     func renderInitialFriendPins() async {
         for (id, friend) in self.friendManager.friends {
             guard let lat = friend.latitude, let lng = friend.longitude else { continue }
@@ -95,22 +99,18 @@ final class MapOrchestrator: ObservableObject {
         }
     }
 
-
-
     // MARK: - Tap Handler
     @objc private func handleTap(_ sender: UITapGestureRecognizer) {
         guard let view = sender.view,
               let friendId = view.accessibilityIdentifier,
               let friend = friendManager.friends[friendId] else { return }
 
-        // Post notification to open the modal
         NotificationCenter.default.post(
             name: .didTapUserAnnotation,
             object: nil,
             userInfo: ["friend": friend]
         )
 
-        // 🌟 Smoothly zoom into the tapped friend's location
         let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
         mapController.mapView.camera.ease(
             to: CameraOptions(center: coordinate, zoom: 17),
@@ -118,6 +118,4 @@ final class MapOrchestrator: ObservableObject {
             curve: .easeInOut
         )
     }
-
 }
-

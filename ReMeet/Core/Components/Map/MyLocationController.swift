@@ -19,12 +19,14 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
     @Published var initials: String? = nil
     @Published var firstName: String? = nil
 
-    override init() {
+    private let profileStore: ProfileStore
+
+    init(profileStore: ProfileStore) {
+        self.profileStore = profileStore
         super.init()
         locationManager.delegate = self
         locationManager.startUpdatingLocation()
-        fetchUserProfileInitials()
-        fetchUserPhoto()
+        loadFromProfileStore()
     }
 
     func requestPermissions() {
@@ -71,64 +73,17 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
                 .upsert(payload, returning: .minimal)
                 .execute()
 
-
             print("✅ Uploaded live location: \(coordinate.latitude), \(coordinate.longitude)")
         } catch {
             print("❌ Location upload failed: \(error)")
         }
     }
 
-    private func fetchUserProfileInitials() {
-        if let cached = UserDefaults.standard.string(forKey: "cachedInitials") {
-            self.initials = cached
-            return
+    private func loadFromProfileStore() {
+        Task { @MainActor in
+            self.firstName = profileStore.firstName
+            self.initials = profileStore.firstName?.prefix(1).uppercased()
+            self.userImage = profileStore.userImage
         }
-
-        Task {
-            do {
-                let session = try await SupabaseManager.shared.client.auth.session
-                let userId = session.user.id.uuidString
-
-                let profiles: [UserProfile] = try await SupabaseManager.shared.client
-                    .from("profiles")
-                    .select("first_name")
-                    .eq("id", value: userId)
-                    .limit(1)
-                    .execute()
-                    .value
-
-                guard let profile = profiles.first else { return }
-                let initial = String(profile.first_name.prefix(1)).uppercased()
-                DispatchQueue.main.async {
-                    self.initials = initial
-                    self.firstName = profile.first_name
-                    UserDefaults.standard.set(initial, forKey: "cachedInitials")
-                }
-            } catch {
-                print("❌ Fetch initials failed: \(error)")
-            }
-        }
-    }
-
-    private func fetchUserPhoto() {
-        if let cachedUrlStr = UserDefaults.standard.string(forKey: "cachedPhotoUrl"),
-           let url = URL(string: cachedUrlStr) {
-            Task {
-                do {
-                    let (data, _) = try await URLSession.shared.data(from: url)
-                    if let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            self.userImage = image
-                        }
-                    }
-                } catch {
-                    print("⚠️ Failed to load cached photo: \(error)")
-                }
-            }
-        }
-    }
-
-    struct UserProfile: Decodable {
-        let first_name: String
     }
 }

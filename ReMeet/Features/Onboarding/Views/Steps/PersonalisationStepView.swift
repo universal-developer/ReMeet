@@ -53,6 +53,3 @@ struct PersonalisationStepView: View {
     }
 }
 
-#Preview {
-    PersonalisationStepView(model: OnboardingModel())
-}

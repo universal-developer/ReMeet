@@ -4,21 +4,44 @@ import SwiftUI
 struct ReMeetApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var isSplashActive = true
-    @StateObject var orchestrator = MapOrchestrator()
+    @State private var profileLoaded = false
+    @StateObject var profileStore = ProfileStore.shared
+    @StateObject var orchestrator = MapOrchestrator(profileStore: ProfileStore.shared)
 
     var body: some Scene {
         WindowGroup {
-            if isSplashActive {
-                SplashScreenView(isActive: $isSplashActive)
-            } else {
-                if isLoggedIn {
-                    MainAppView(orchestrator: orchestrator)
+            ZStack {
+                if isSplashActive {
+                    SplashScreenView(isActive: $isSplashActive)
+                        .transition(.opacity)
+                } else if !profileLoaded {
+                    Color(.systemBackground)
+                        .ignoresSafeArea()
+                    ProgressView("Loading profile…")
+                        .transition(.opacity)
+                        .onAppear {
+                            Task {
+                                await profileStore.load()
+                                withAnimation(.easeOut(duration: 0.4)) {
+                                    profileLoaded = true
+                                }
+                            }
+                        }
                 } else {
-                    NavigationView {
-                        WelcomeView(orchestrator: orchestrator)
+                    if isLoggedIn {
+                        MainAppView(orchestrator: orchestrator)
+                            .environmentObject(profileStore)
+                            .transition(.opacity)
+                    } else {
+                        NavigationView {
+                            WelcomeView(orchestrator: orchestrator)
+                        }
+                        .environmentObject(profileStore)
+                        .transition(.opacity)
                     }
                 }
             }
+            .animation(.easeOut(duration: 0.35), value: profileLoaded)
         }
     }
 }

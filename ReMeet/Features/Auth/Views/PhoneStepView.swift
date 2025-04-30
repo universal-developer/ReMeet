@@ -380,7 +380,3 @@ extension View {
         }
     }
 }
-
-#Preview {
-    PhoneStepView(model: OnboardingModel())
-}

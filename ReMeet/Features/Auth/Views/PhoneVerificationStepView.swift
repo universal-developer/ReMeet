@@ -45,6 +45,7 @@ struct PhoneVerificationStepView: View {
                         .cornerRadius(8)
                         .focused($focusedField, equals: index)
                         .onChange(of: codeDigits[index]) { _, newValue in
+                            guard index < codeDigits.count else { return }
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered != newValue {
                                 codeDigits[index] = filtered
@@ -108,6 +109,3 @@ struct PhoneVerificationStepView: View {
     }
 }
 
-#Preview {
-    PhoneVerificationStepView(model: OnboardingModel())
-}

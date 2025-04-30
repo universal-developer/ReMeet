@@ -13,6 +13,7 @@ struct QRTabScreen: View {
     @State private var myQRCodeImage: UIImage?
 
     var orchestrator: MapOrchestrator
+    @EnvironmentObject var profile: ProfileStore
 
     enum Tab {
         case scan
@@ -67,113 +68,73 @@ struct QRTabScreen: View {
     private var myQRCodeCard: some View {
         VStack {
             Spacer()
-            
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                                    
-                VStack {
-                    if let qr = myQRCodeImage {
-                        Image(uiImage: qr)
-                            .resizable()
-                            .interpolation(.none)
-                            .scaledToFit()
-                            .frame(width: 200, height: 200)
-                            .padding(.top, 10)
-                    } else {
-                        ProgressView()
-                            .onAppear(perform: generateMyQRCode)
-                            .padding()
-                    }
-                }
-            }
-            .frame(width: 300, height: 300)
-            .padding(.horizontal)
-            .padding(.top, 40)
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-
-    
-
-
-        
-        /*VStack {
-            Spacer()
 
             ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemBackground))
-                    .shadow(radius: 5)
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.white)
+                    .frame(width: 320, height: 450)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
 
-                VStack(spacing: 16) {
-                    Spacer().frame(height: 40)
+                VStack(spacing: 0) {
+                    Text(profile.firstName ?? "You")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .padding(.top, 15)
 
-                    // Profile
-                    if let image = orchestrator.locationController.userImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 80, height: 80)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                            .background(Circle().fill(Color.white))
-                            .offset(y: -60)
-                    } else if let initials = orchestrator.locationController.initials {
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Text(initials)
-                                    .font(.title2)
-                                    .foregroundColor(.black)
-                            )
-                            .frame(width: 80, height: 80)
-                            .background(Circle().fill(Color.white))
-                            .offset(y: -60)
-                    }
-
-                    // Username
-                    if let name = orchestrator.locationController.firstName {
-                        Text(name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                    }
-
-                    Text("ReMeet Profile")
+                    Text("WhatsApp contact")
                         .font(.subheadline)
                         .foregroundColor(.gray)
+                        .padding(.top, 4)
+                        .padding(.bottom, 24)
 
                     if let qr = myQRCodeImage {
                         Image(uiImage: qr)
                             .resizable()
                             .interpolation(.none)
                             .scaledToFit()
-                            .frame(width: 200, height: 200)
-                            .padding(.top, 10)
+                            .frame(width: 220, height: 220)
+                            .padding(.bottom, 30)
                     } else {
                         ProgressView()
                             .onAppear(perform: generateMyQRCode)
-                            .padding()
+                            .frame(width: 220, height: 220)
+                            .padding(.bottom, 30)
                     }
-
-                    Spacer()
                 }
-                .padding()
             }
-            .padding(.horizontal, 30)
+            .overlay(
+                profileImage
+                    .offset(y: -225)
+            )
 
             Spacer()
+        }
+    }
 
-            Text("Your QR code is private. Only share with people you meet.")
-                .font(.footnote)
-                .foregroundColor(.gray)
-                .padding(.top, 10)
+    private var profileImage: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 76, height: 76)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
 
-            Spacer()
-        }*/
+            if let image = profile.userImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 70, height: 70)
+                    .clipShape(Circle())
+            } else if let initials = profile.firstName?.prefix(1).uppercased() {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 70, height: 70)
+                    .overlay(
+                        Text(initials)
+                            .font(.title2)
+                            .foregroundColor(.black)
+                    )
+            }
+        }
     }
 
     private func generateMyQRCode() {
@@ -182,22 +143,20 @@ struct QRTabScreen: View {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let userId = session.user.id.uuidString
                 let link = "https://api.remeet.app/u/\(userId)"
-                
+
                 print("🔗 QR code link: \(link)")
-                
+
                 myQRCodeImage = QRCodeService.generate(
                     from: link,
                     foregroundColor: .black,
                     backgroundColor: .white,
-                    logo: UIImage(named: "Logo") // optional
+                    logo: UIImage(named: "Logo")
                 )
             } catch {
                 print("❌ Failed to get user session for QR code generation: \(error)")
             }
         }
     }
-
-
 
     private func handleScannedQRCode(_ value: String) {
         print("📸 Scanned QR Code: \(value)")
@@ -222,8 +181,4 @@ struct QRTabScreen: View {
             }
         }
     }
-}
-
-#Preview {
-    QRTabScreen(orchestrator: MapOrchestrator())
 }

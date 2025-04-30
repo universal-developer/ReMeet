@@ -159,6 +159,3 @@ struct BirthdayStepView: View {
     }
 }
 
-#Preview {
-    BirthdayStepView(model: OnboardingModel())
-}

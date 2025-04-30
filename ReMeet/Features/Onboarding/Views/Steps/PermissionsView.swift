@@ -123,6 +123,4 @@ class LocationPermissionManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 }
 
-#Preview {
-    PermissionsView(model: OnboardingModel())
-}
+

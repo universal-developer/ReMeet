@@ -63,7 +63,4 @@ struct PhotosStepView: View {
     }
 }
 
-#Preview {
-    PhotosStepView(model: OnboardingModel())
-}
 
