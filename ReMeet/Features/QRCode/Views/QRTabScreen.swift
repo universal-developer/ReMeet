@@ -12,7 +12,6 @@ struct QRTabScreen: View {
     @State private var selectedTab: Tab = .myCode
     @State private var myQRCodeImage: UIImage?
 
-    var orchestrator: MapOrchestrator
     @EnvironmentObject var profile: ProfileStore
 
     enum Tab {

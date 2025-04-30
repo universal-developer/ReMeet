@@ -11,14 +11,17 @@ import MapboxMaps
 
 struct HomeMapScreen: View {
     @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
-    
+        
     @State private var myUserId: String?
     @State private var tappedFriend: FriendLocationManager.Friend?
     @State private var tappedPreviewImage: UIImage?
     @State private var showModal = false
     @State private var mapIsVisible = false
     @State private var isFirstLoad = true
+    @State private var showLocationAlert = false
     
+    @EnvironmentObject var profile: ProfileStore
+
     @GestureState private var dragOffset: CGSize = .zero
     
     var orchestrator: MapOrchestrator
@@ -60,8 +63,26 @@ struct HomeMapScreen: View {
                     }
             }
         }
+        .onChange(of: orchestrator.locationController.permissionStatus) { newStatus in
+            if newStatus == .denied || newStatus == .restricted {
+                showLocationAlert = true
+            }
+        }
+        .alert(isPresented: $showLocationAlert) {
+            Alert(
+                title: Text("Location Access Disabled"),
+                message: Text("To show people nearby, please allow location access in Settings."),
+                primaryButton: .default(Text("Open Settings")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
         .onAppear {
             fetchUserId()
+            
         }
         .safeAreaInset(edge: .bottom, alignment: .center) {
             if showModal, let friend = tappedFriend {
@@ -161,17 +182,27 @@ struct HomeMapScreen: View {
     }
 
     private func handleAnnotationTap(_ notification: NotificationCenter.Publisher.Output) {
-        guard let friend = notification.userInfo?["friend"] as? FriendLocationManager.Friend else {
-            print("⚠️ Invalid tap payload")
-            return
-        }
-        tappedFriend = friend
-
-        Task {
-            tappedPreviewImage = await cachedImage(from: friend.photo_url)
+        if let friend = notification.userInfo?["friend"] as? FriendLocationManager.Friend {
+            tappedFriend = friend
+            Task {
+                tappedPreviewImage = await cachedImage(from: friend.photo_url)
+                withAnimation { showModal = true }
+            }
+        } else if let userId = notification.userInfo?["userId"] as? String {
+            tappedFriend = FriendLocationManager.Friend(
+                friend_id: userId,
+                first_name: profile.firstName ?? "You",
+                latitude: nil,
+                longitude: nil,
+                photo_url: nil
+            )
+            tappedPreviewImage = profile.userImage
             withAnimation { showModal = true }
+        } else {
+            print("⚠️ Invalid tap payload")
         }
     }
+
 
     private func cachedImage(from urlStr: String?) async -> UIImage? {
         guard let urlStr = urlStr, let url = URL(string: urlStr) else { return nil }

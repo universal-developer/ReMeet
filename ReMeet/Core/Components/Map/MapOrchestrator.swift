@@ -25,7 +25,20 @@ final class MapOrchestrator: ObservableObject {
 
     init(profileStore: ProfileStore) {
         self.profileStore = profileStore
-        self.locationController = MyLocationController(profileStore: profileStore)
+
+        self.locationController = MyLocationController(
+            profileStore: profileStore,
+            onProfileLoaded: { } // will override right after
+        )
+
+        self.locationController.onProfileLoaded = { [weak self] in
+            Task {
+                await self?.renderCurrentUserPin()
+                await self?.renderInitialFriendPins()
+            }
+        }
+        
+        NotificationCenter.default.post(name: .shouldUpdateUserAnnotation, object: nil)
 
         Task.detached(priority: .background) {
             await self.friendManager.fetchInitialFriends()
@@ -37,11 +50,8 @@ final class MapOrchestrator: ObservableObject {
                 self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
             }
         }
-
-        Task {
-            await self.renderInitialFriendPins()
-        }
     }
+
 
     // MARK: - Render or Update Friend Pins
     private func handleFriendLocationUpdate(userId: String, coordinate: CLLocationCoordinate2D) {
@@ -88,6 +98,34 @@ final class MapOrchestrator: ObservableObject {
             }
         }
     }
+    
+    func renderCurrentUserPin() async {
+        guard let name = profileStore.firstName, !name.isEmpty else { return }
+
+        let mapView = mapController.mapView
+        let center = mapView.cameraState.center
+
+        let pin = UserPinData(
+            id: profileStore.userId ?? UUID().uuidString,
+            name: name,
+            photoURL: nil,
+            coordinate: center
+        )
+
+        let image = profileStore.userImage
+
+        if let view = MapAvatarRenderer.render(
+            on: mapView,
+            user: pin,
+            image: image,
+            target: self,
+            tapAction: #selector(self.handleTap(_:))
+        ) {
+            self.annotationCache[pin.id] = view
+        }
+    }
+
+
 
     func renderInitialFriendPins() async {
         for (id, friend) in self.friendManager.friends {
@@ -98,6 +136,7 @@ final class MapOrchestrator: ObservableObject {
             }
         }
     }
+    
 
     // MARK: - Tap Handler
     @objc private func handleTap(_ sender: UITapGestureRecognizer) {
@@ -105,11 +144,16 @@ final class MapOrchestrator: ObservableObject {
               let friendId = view.accessibilityIdentifier,
               let friend = friendManager.friends[friendId] else { return }
 
+        let isCurrentUser = friend.friend_id == profileStore.userId
+
         NotificationCenter.default.post(
             name: .didTapUserAnnotation,
             object: nil,
-            userInfo: ["friend": friend]
+            userInfo: isCurrentUser
+                ? ["userId": profileStore.userId ?? "unknown"]
+                : ["friend": friend]
         )
+
 
         let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
         mapController.mapView.camera.ease(

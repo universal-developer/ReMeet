@@ -60,12 +60,26 @@ struct MapViewRepresentable: UIViewRepresentable {
             self.orchestrator = orchestrator
             
             NotificationCenter.default.addObserver(self, selector: #selector(handleZoomOnUser(_:)), name: .zoomOnUser, object: nil)
+            
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(updateCurrentUserAnnotation),
+                name: .shouldUpdateUserAnnotation,
+                object: nil
+            )
+
         }
 
         @objc func handleZoomOnUser(_ notification: Notification) {
             guard let coord = notification.userInfo?["coordinate"] as? CLLocationCoordinate2D else { return }
             mapView?.camera.ease(to: CameraOptions(center: coord, zoom: 17), duration: 1.0, curve: .easeInOut)
         }
+        
+        @objc func updateCurrentUserAnnotation() {
+            guard let coordinate = lastCoordinate else { return }
+            centerAndAnnotate(coordinate: coordinate, controller: orchestrator.mapController)
+        }
+
         
         @objc func handleAnnotationTap(_ sender: UITapGestureRecognizer) {
             guard let tappedView = sender.view,
@@ -103,6 +117,8 @@ struct MapViewRepresentable: UIViewRepresentable {
             self.centerAndAnnotate(coordinate: coordinate, controller: controller)
         }
         
+        
+        
         func centerAndAnnotate(coordinate: CLLocationCoordinate2D, controller: MapController) {
             guard let mapView = mapView else { return }
 
@@ -115,8 +131,10 @@ struct MapViewRepresentable: UIViewRepresentable {
                 guard let self = self else { return }
 
                 do {
-                    let image = await MainActor.run { orchestrator.locationController.userImage }
-                    let initials = await MainActor.run { orchestrator.locationController.initials }
+                    let image = await MainActor.run { orchestrator.profileStore.userImage }
+                    let initials = await MainActor.run {
+                        orchestrator.profileStore.firstName?.prefix(1).uppercased()
+                    }
                     let userId = try await SupabaseManager.shared.client.auth.session.user.id.uuidString
 
                     DispatchQueue.main.async {
@@ -150,16 +168,12 @@ struct MapViewRepresentable: UIViewRepresentable {
                 }
             }
         }
+        
+        
 
 
         deinit {
             NotificationCenter.default.removeObserver(self)
         }
     }
-}
-
-extension Notification.Name {
-    static let mapDidBecomeVisible = Notification.Name("mapDidBecomeVisible")
-    static let zoomOnUser = Notification.Name("zoomOnUser")
-    static let didTapUserAnnotation = Notification.Name("didTapUserAnnotation")
 }

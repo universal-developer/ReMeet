@@ -18,15 +18,20 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
     @Published var userImage: UIImage? = nil
     @Published var initials: String? = nil
     @Published var firstName: String? = nil
+    @Published var permissionStatus: CLAuthorizationStatus = .notDetermined
 
     private let profileStore: ProfileStore
+    var onProfileLoaded: () -> Void = {}
 
-    init(profileStore: ProfileStore) {
+    init(profileStore: ProfileStore, onProfileLoaded: @escaping () -> Void) {
         self.profileStore = profileStore
+        self.onProfileLoaded = onProfileLoaded
         super.init()
         locationManager.delegate = self
+        requestPermissions()
         locationManager.startUpdatingLocation()
         loadFromProfileStore()
+        permissionStatus = locationManager.authorizationStatus
     }
 
     func requestPermissions() {
@@ -46,6 +51,10 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
         Task.detached(priority: .background) {
             await self.safeUpload(coordinate)
         }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        permissionStatus = manager.authorizationStatus
     }
 
     @Sendable
@@ -84,6 +93,7 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
             self.firstName = profileStore.firstName
             self.initials = profileStore.firstName?.prefix(1).uppercased()
             self.userImage = profileStore.userImage
+            onProfileLoaded() // Notify orchestrator directly
         }
     }
 }
