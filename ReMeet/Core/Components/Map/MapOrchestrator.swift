@@ -44,12 +44,35 @@ final class MapOrchestrator: ObservableObject {
             await self.friendManager.fetchInitialFriends()
             await self.renderInitialFriendPins()
         }
-
-        friendManager.listenForLiveUpdates { [weak self] userId, coordinate in
+        
+        friendManager.listenForLiveUpdates(
+            onUpdate: { [weak self] userId, coordinate in
+                Task { @MainActor in
+                    self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
+                }
+            },
+            onGhost: { [weak self] userId in
+                Task { @MainActor in
+                    if let view = self?.annotationCache[userId] {
+                        self?.mapController.mapView.viewAnnotations.remove(view)
+                        self?.annotationCache.removeValue(forKey: userId)
+                        print("👻 Removed annotation for ghosted user: \(userId)")
+                    }
+                }
+            }
+        )
+        
+        friendManager.onRefetch = { [weak self] userId, coordinate in
             Task { @MainActor in
                 self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
             }
         }
+
+
+        
+        friendManager.startGhostRefreshTimer(interval: 30)
+        
+        
     }
 
 

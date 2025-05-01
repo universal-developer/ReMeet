@@ -13,6 +13,8 @@ import MapboxMaps
 final class FriendLocationManager: ObservableObject {
     @Published var friends: [String: Friend] = [:]  // friend_id -> Friend
     private var realtimeChannel: Supabase.RealtimeChannelV2?
+    private var ghostRefreshTimer: Timer?
+    var onRefetch: ((String, CLLocationCoordinate2D) -> Void)?
 
     struct Friend: Decodable {
         let friend_id: String
@@ -21,7 +23,7 @@ final class FriendLocationManager: ObservableObject {
         let longitude: Double?
         let photo_url: String?
     }
-
+    
     func fetchInitialFriends() async {
         do {
             let session = try await SupabaseManager.shared.client.auth.session
@@ -31,12 +33,16 @@ final class FriendLocationManager: ObservableObject {
                 .from("friends_with_metadata")
                 .select("*")
                 .eq("user_id", value: userId)
+                .eq("is_ghost", value: false)
                 .execute()
                 .value
+            
 
             DispatchQueue.main.async {
                 for friend in result {
                     self.friends[friend.friend_id] = friend
+                    let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
+                    self.onRefetch?(friend.friend_id, coordinate) // ← new hook
                 }
             }
         } catch {
@@ -44,7 +50,10 @@ final class FriendLocationManager: ObservableObject {
         }
     }
     
-    func listenForLiveUpdates(onUpdate: @escaping (String, CLLocationCoordinate2D) -> Void) {
+    func listenForLiveUpdates(
+        onUpdate: @escaping (String, CLLocationCoordinate2D) -> Void,
+        onGhost: @escaping (String) -> Void
+    ) {
         let channel = SupabaseManager.shared.client.realtimeV2.channel("public:user_locations")
         let updates = channel.postgresChange(UpdateAction.self, table: "user_locations")
 
@@ -52,22 +61,56 @@ final class FriendLocationManager: ObservableObject {
             await channel.subscribe()
             for await update in updates {
                 let record = update.record
-                if let userId = record["user_id"] as? String,
-                   let lat = record["latitude"] as? Double,
-                   let lng = record["longitude"] as? Double {
-                    let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+
+                guard
+                    let userIdRaw = record["user_id"],
+                    let latRaw = record["latitude"],
+                    let lngRaw = record["longitude"],
+                    let ghostRaw = record["is_ghost"],
+                    case let .string(userId) = userIdRaw,
+                    case let .double(lat) = latRaw,
+                    case let .double(lng) = lngRaw,
+                    case let .bool(isGhost) = ghostRaw
+                else {
+                    print("⚠️ Invalid payload in record: \(record)")
+                    continue
+                }
+
+                if isGhost {
                     DispatchQueue.main.async {
-                        onUpdate(userId, coordinate)
+                        self.friends.removeValue(forKey: userId)
+                        onGhost(userId)
                     }
-                } else {
-                    print("⚠️ Invalid payload format: \(record)")
+                    print("👻 Removed ghosted user from map: \(userId)")
+                    continue
+                }
+
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+                DispatchQueue.main.async {
+                    onUpdate(userId, coordinate)
                 }
             }
         }
 
-        // ✅ FIXED: RealtimeChannelV2 type match
         realtimeChannel = channel
     }
+
+    
+    func startGhostRefreshTimer(interval: TimeInterval = 30) {
+        ghostRefreshTimer?.invalidate()
+        ghostRefreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task {
+                await self?.fetchInitialFriends()
+            }
+        }
+    }
+    
+    func stopGhostRefreshTimer() {
+        ghostRefreshTimer?.invalidate()
+        ghostRefreshTimer = nil
+    }
+
+
 
 
     deinit {

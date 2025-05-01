@@ -12,6 +12,13 @@ import MapboxMaps
 import UIKit
 
 final class MyLocationController: NSObject, ObservableObject, CLLocationManagerDelegate {
+    struct LocationPayload: Codable {
+        let user_id: String
+        let latitude: Double // <- match your real column name
+        let longitude: Double
+        let is_ghost: Bool
+    }
+    
     private let locationManager = CLLocationManager()
     private var lastUploadTime: TimeInterval = 0
 
@@ -40,18 +47,39 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
-        uploadLocation(latest.coordinate)
+        uploadUserLocation(latest)
+
     }
 
-    private func uploadLocation(_ coordinate: CLLocationCoordinate2D) {
-        let now = Date().timeIntervalSince1970
-        if now - lastUploadTime < 10 { return }
-        lastUploadTime = now
+    func uploadUserLocation(_ location: CLLocation) {
+        Task {
+            do {
+                let session = try await SupabaseManager.shared.client.auth.session
+                let userId = session.user.id.uuidString
 
-        Task.detached(priority: .background) {
-            await self.safeUpload(coordinate)
+                let isGhost = UserDefaults.standard.bool(forKey: "isGhostMode")
+
+                let payload = LocationPayload(
+                    user_id: userId,
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    is_ghost: isGhost
+                )
+
+                try await SupabaseManager.shared.client
+                    .from("user_locations")
+                    .upsert(payload, returning: .minimal)
+                    .execute()
+
+
+                print("📡 Location uploaded: ghost=\(isGhost)")
+            } catch {
+                print("❌ Upload failed: \(error)")
+            }
         }
     }
+
+
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         permissionStatus = manager.authorizationStatus

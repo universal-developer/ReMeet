@@ -11,6 +11,7 @@ import MapboxMaps
 
 struct HomeMapScreen: View {
     @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
+    @AppStorage("isGhostMode") private var isGhostMode = false // persists across sessions
         
     @State private var myUserId: String?
     @State private var tappedFriend: FriendLocationManager.Friend?
@@ -19,12 +20,14 @@ struct HomeMapScreen: View {
     @State private var mapIsVisible = false
     @State private var isFirstLoad = true
     @State private var showLocationAlert = false
+    @State private var showVisibilitySheet = false
     
     @EnvironmentObject var profile: ProfileStore
 
     @GestureState private var dragOffset: CGSize = .zero
     
     var orchestrator: MapOrchestrator
+    
 
     var body: some View {
         ZStack {
@@ -62,6 +65,9 @@ struct HomeMapScreen: View {
                         withAnimation { showModal = false }
                     }
             }
+        }
+        .sheet(isPresented: $showVisibilitySheet) {
+            VisibilityModeSheet(isGhostMode: $isGhostMode)
         }
         .onChange(of: orchestrator.locationController.permissionStatus) { newStatus in
             if newStatus == .denied || newStatus == .restricted {
@@ -135,7 +141,8 @@ struct HomeMapScreen: View {
                     .cornerRadius(20)
                 }
                 Spacer()
-                Button(action: { print("⚙️ Settings tapped") }) {
+                
+                Button(action: { print("⚙️ Settings tapped"); showVisibilitySheet = true}) {
                     Image(systemName: "gearshape.fill")
                         .foregroundColor(.primary)
                         .padding(10)

@@ -131,20 +131,68 @@ struct MapViewRepresentable: UIViewRepresentable {
                 guard let self = self else { return }
 
                 do {
-                    let image = await MainActor.run { orchestrator.profileStore.userImage }
+                    let isGhostMode = UserDefaults.standard.bool(forKey: "isGhostMode")
+
+                    let ghostImage = UIImage(
+                        systemName: "ghost.fill",
+                        withConfiguration: UIImage.SymbolConfiguration(pointSize: 36, weight: .regular)
+                    )?.withTintColor(.gray, renderingMode: .alwaysOriginal)
+
+                    let profileImage = await MainActor.run { orchestrator.profileStore.userImage }
+
+                    let fallbackImage = UIImage(
+                        systemName: "person.circle",
+                        withConfiguration: UIImage.SymbolConfiguration(pointSize: 36, weight: .regular)
+                    )?.withTintColor(.gray, renderingMode: .alwaysOriginal)
+
+                    let image: UIImage = isGhostMode
+                        ? ghostImage ?? fallbackImage!
+                        : profileImage ?? fallbackImage!
+
+                    
+
                     let initials = await MainActor.run {
                         orchestrator.profileStore.firstName?.prefix(1).uppercased()
                     }
                     let userId = try await SupabaseManager.shared.client.auth.session.user.id.uuidString
 
                     DispatchQueue.main.async {
-                        let annotationView = AnnotationFactory.makeAnnotationView(
+                        /*let annotationView = AnnotationFactory.makeAnnotationView(
                             initials: initials,
                             image: image,
                             userId: userId,
                             target: self,
                             action: #selector(self.handleAnnotationTap(_:))
-                        )
+                        )*/
+                        
+                        let annotationView = UIView(frame: CGRect(x: 0, y: 0, width: 50, height: 50))
+                        annotationView.layer.cornerRadius = 25
+                        annotationView.clipsToBounds = true
+                        annotationView.backgroundColor = UIColor.systemGray6
+
+                        if isGhostMode {
+                            let emojiLabel = UILabel()
+                            emojiLabel.text = "👻"
+                            emojiLabel.font = UIFont.systemFont(ofSize: 28)
+                            emojiLabel.textAlignment = .center
+                            emojiLabel.frame = CGRect(x: 0, y: 0, width: annotationView.bounds.width, height: annotationView.bounds.height)
+                            emojiLabel.clipsToBounds = true
+
+                            annotationView.addSubview(emojiLabel)
+                        } else {
+                            // 👤 Profile image view
+                            let imageView = UIImageView(image: image)
+                            imageView.frame = annotationView.bounds
+                            imageView.contentMode = .scaleAspectFill
+                            imageView.clipsToBounds = true
+                            annotationView.addSubview(imageView)
+                        }
+
+
+                        let tap = UITapGestureRecognizer(target: self, action: #selector(self.handleAnnotationTap(_:)))
+                        annotationView.addGestureRecognizer(tap)
+
+
                         annotationView.accessibilityIdentifier = "currentUser"
 
                         let options = ViewAnnotationOptions(
@@ -157,7 +205,8 @@ struct MapViewRepresentable: UIViewRepresentable {
 
                         do {
                             try mapView.viewAnnotations.add(annotationView, options: options)
-                            self.currentUserAnnotation = annotationView // <- ✅ track it!
+                            print("✅ Annotation view added")
+                            self.currentUserAnnotation = annotationView
                             NotificationCenter.default.post(name: .mapDidBecomeVisible, object: nil)
                         } catch {
                             print("❌ Failed to add annotation: \(error)")

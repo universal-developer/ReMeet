@@ -10,16 +10,16 @@ import Supabase
 
 struct FastUserPreviewSheet: View {
     let userId: String
-        let initialFirstName: String?
-        let profileImage: UIImage?
-        var onClose: () -> Void
+    let initialFirstName: String?
+    let profileImage: UIImage?
+    var onClose: () -> Void
 
-        init(userId: String, initialFirstName: String? = nil, profileImage: UIImage? = nil, onClose: @escaping () -> Void) {
-            self.userId = userId
-            self.initialFirstName = initialFirstName
-            self.profileImage = profileImage
-            self.onClose = onClose
-        }
+    init(userId: String, initialFirstName: String? = nil, profileImage: UIImage? = nil, onClose: @escaping () -> Void) {
+        self.userId = userId
+        self.initialFirstName = initialFirstName
+        self.profileImage = profileImage
+        self.onClose = onClose
+    }
 
     @State private var userImage: UIImage?
     @State private var firstName: String = ""
@@ -28,12 +28,11 @@ struct FastUserPreviewSheet: View {
     var body: some View {
         Group {
             HStack(spacing: 12) {
-                if let image = userImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .frame(width: 48, height: 48)
-                        .clipShape(Circle())
-                }
+                // Instead of directly showing the image with layout impact
+                ImageView(image: userImage)
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(firstName)
@@ -62,24 +61,16 @@ struct FastUserPreviewSheet: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(.horizontal)
             .onAppear {
-                if let image = profileImage {
-                    self.userImage = image
-                }
-                if let name = initialFirstName {
-                    self.firstName = name
-                }
-                if userImage == nil || firstName.isEmpty {
-                    loadData()
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isVisible = true
-                }
+                print("🟢 FastUserPreviewSheet onAppear")
+                print("   initialFirstName: \(initialFirstName ?? "nil")")
+                print("   profileImage: \(profileImage != nil ? "✅" : "nil")")
 
+                self.userImage = profileImage
+                self.firstName = initialFirstName ?? ""
             }
         }
     }
-
+    
     func loadData() {
         Task {
             do {
@@ -117,6 +108,27 @@ struct FastUserPreviewSheet: View {
         }
     }
 }
+
+private struct ImageView: View {
+    let image: UIImage?
+
+    var body: some View {
+        Group {
+            if let img = image {
+                Image(uiImage: img)
+                    .resizable()
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: image)
+            } else {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay(ProgressView())
+            }
+        }
+        .frame(width: 48, height: 48)
+    }
+}
+
 
 private struct UserProfile: Decodable {
     let first_name: String
