@@ -115,3 +115,4 @@ final class MapController: ObservableObject {
         try? mapView.viewAnnotations.update(view, options: options)
     }
 }
+

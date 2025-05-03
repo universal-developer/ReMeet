@@ -201,7 +201,8 @@ struct HomeMapScreen: View {
                 first_name: profile.firstName ?? "You",
                 latitude: nil,
                 longitude: nil,
-                photo_url: nil
+                photo_url: nil,
+                is_ghost: false
             )
             tappedPreviewImage = profile.userImage
             withAnimation { showModal = true }

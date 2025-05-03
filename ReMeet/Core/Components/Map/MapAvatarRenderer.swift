@@ -43,6 +43,7 @@ final class MapAvatarRenderer {
 
         do {
             try mapView.viewAnnotations.add(annotationView, options: options)
+            print("🆕 Added view for \(user.id): \(annotationView)")
             return annotationView
         } catch {
             print("❌ Failed to render avatar for \(user.id): \(error)")

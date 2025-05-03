@@ -19,7 +19,7 @@ final class MyLocationController: NSObject, ObservableObject, CLLocationManagerD
         let is_ghost: Bool
     }
     
-    private let locationManager = CLLocationManager()
+    let locationManager = CLLocationManager()
     private var lastUploadTime: TimeInterval = 0
 
     @Published var userImage: UIImage? = nil

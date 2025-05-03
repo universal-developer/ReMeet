@@ -22,6 +22,7 @@ final class FriendLocationManager: ObservableObject {
         let latitude: Double?
         let longitude: Double?
         let photo_url: String?
+        let is_ghost: Bool?
     }
     
     func fetchInitialFriends() async {
@@ -75,12 +76,15 @@ final class FriendLocationManager: ObservableObject {
                     print("⚠️ Invalid payload in record: \(record)")
                     continue
                 }
+                
+                print("📩 Live update: userId=\(userId), isGhost=\(isGhost)")
 
                 if isGhost {
                     DispatchQueue.main.async {
                         self.friends.removeValue(forKey: userId)
                         onGhost(userId)
                     }
+                    print("📩 Live update: userId=\(userId), isGhost=\(isGhost)")
                     print("👻 Removed ghosted user from map: \(userId)")
                     continue
                 }

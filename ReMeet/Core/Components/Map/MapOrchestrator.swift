@@ -37,44 +37,59 @@ final class MapOrchestrator: ObservableObject {
                 await self?.renderInitialFriendPins()
             }
         }
-        
+
         NotificationCenter.default.post(name: .shouldUpdateUserAnnotation, object: nil)
 
         Task.detached(priority: .background) {
             await self.friendManager.fetchInitialFriends()
             await self.renderInitialFriendPins()
         }
-        
+
         friendManager.listenForLiveUpdates(
-            onUpdate: { [weak self] userId, coordinate in
+            onUpdate: { [weak self] (userId: String, coordinate: CLLocationCoordinate2D) in
                 Task { @MainActor in
                     self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
                 }
             },
-            onGhost: { [weak self] userId in
+            onGhost: { [weak self] (userId: String) in
                 Task { @MainActor in
-                    if let view = self?.annotationCache[userId] {
-                        self?.mapController.mapView.viewAnnotations.remove(view)
-                        self?.annotationCache.removeValue(forKey: userId)
-                        print("👻 Removed annotation for ghosted user: \(userId)")
+                    guard let self = self else { return }
+
+                    if let view = self.annotationCache[userId] {
+                        self.mapController.mapView.viewAnnotations.remove(view)
+                        self.annotationCache.removeValue(forKey: userId)
+                        print("👻 Removed annotation view for ghosted user: \(userId)")
+                    } else {
+                        print("⚠️ Could not find view in annotationCache for ghosted user: \(userId)")
+                        print("🧾 Current annotationCache keys: \(self.annotationCache.keys)")
                     }
                 }
             }
         )
-        
+
         friendManager.onRefetch = { [weak self] userId, coordinate in
             Task { @MainActor in
                 self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
             }
         }
 
-
-        
         friendManager.startGhostRefreshTimer(interval: 30)
-        
-        
-    }
 
+        NotificationCenter.default.addObserver(forName: .didToggleGhostMode, object: nil, queue: .main) { [weak self] _ in
+            if let location = self?.locationController.locationManager.location {
+                Task {
+                    await self?.locationController.uploadUserLocation(location)
+                }
+            }
+        }
+
+        NotificationCenter.default.addObserver(forName: .didExternallyUpdateGhostStatus, object: nil, queue: .main) { [weak self] _ in
+            Task {
+                await self?.friendManager.fetchInitialFriends()
+                await self?.renderInitialFriendPins()
+            }
+        }
+    }
 
     // MARK: - Render or Update Friend Pins
     private func handleFriendLocationUpdate(userId: String, coordinate: CLLocationCoordinate2D) {
@@ -108,6 +123,10 @@ final class MapOrchestrator: ObservableObject {
                 )
 
                 await MainActor.run {
+                    if let existing = self.annotationCache[userId] {
+                        self.mapController.mapView.viewAnnotations.remove(existing)
+                    }
+
                     if let rendered = MapAvatarRenderer.render(
                         on: mapView,
                         user: pin,
@@ -120,8 +139,19 @@ final class MapOrchestrator: ObservableObject {
                 }
             }
         }
+        
+        if friend.is_ghost == true {
+            print("🛑 Skipping ghost user update for: \(friend.friend_id)")
+            if let view = self.annotationCache[userId] {
+                self.mapController.mapView.viewAnnotations.remove(view)
+                self.annotationCache.removeValue(forKey: userId)
+                print("🔥 Removed manually in fallback from handleFriendLocationUpdate: \(userId)")
+            }
+            return
+        }
+
     }
-    
+
     func renderCurrentUserPin() async {
         guard let name = profileStore.firstName, !name.isEmpty else { return }
 
@@ -148,18 +178,18 @@ final class MapOrchestrator: ObservableObject {
         }
     }
 
-
-
     func renderInitialFriendPins() async {
         for (id, friend) in self.friendManager.friends {
-            guard let lat = friend.latitude, let lng = friend.longitude else { continue }
+            guard let lat = friend.latitude,
+                  let lng = friend.longitude,
+                  friend.is_ghost == false else { continue }
+
             let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
             await MainActor.run {
                 self.handleFriendLocationUpdate(userId: id, coordinate: coord)
             }
         }
     }
-    
 
     // MARK: - Tap Handler
     @objc private func handleTap(_ sender: UITapGestureRecognizer) {
@@ -176,7 +206,6 @@ final class MapOrchestrator: ObservableObject {
                 ? ["userId": profileStore.userId ?? "unknown"]
                 : ["friend": friend]
         )
-
 
         let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
         mapController.mapView.camera.ease(
