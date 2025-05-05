@@ -22,19 +22,21 @@ final class MapOrchestrator: ObservableObject {
 
     // MARK: - Friend Annotations Cache
     private var annotationCache: [String: UIView] = [:]
+    private var ghostedFriendIds: Set<String> = []
 
     init(profileStore: ProfileStore) {
         self.profileStore = profileStore
 
         self.locationController = MyLocationController(
             profileStore: profileStore,
-            onProfileLoaded: { } // will override right after
+            onProfileLoaded: { }
         )
 
         self.locationController.onProfileLoaded = { [weak self] in
-            Task {
-                await self?.renderCurrentUserPin()
-                await self?.renderInitialFriendPins()
+            Task { [weak self] in
+                guard let self else { return }
+                await self.renderCurrentUserPin()
+                await self.renderInitialFriendPins()
             }
         }
 
@@ -42,121 +44,149 @@ final class MapOrchestrator: ObservableObject {
 
         Task.detached(priority: .background) {
             await self.friendManager.fetchInitialFriends()
-            await self.renderInitialFriendPins()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                Task { await self.renderInitialFriendPins() }
+            }
         }
 
         friendManager.listenForLiveUpdates(
-            onUpdate: { [weak self] (userId: String, coordinate: CLLocationCoordinate2D) in
-                Task { @MainActor in
-                    self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
-                }
+            onUpdate: { [weak self] (userId, coordinate) in
+                Task { await self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate) }
             },
-            onGhost: { [weak self] (userId: String) in
-                Task { @MainActor in
-                    guard let self = self else { return }
-
-                    if let view = self.annotationCache[userId] {
-                        self.mapController.mapView.viewAnnotations.remove(view)
-                        self.annotationCache.removeValue(forKey: userId)
-                        print("👻 Removed annotation view for ghosted user: \(userId)")
-                    } else {
-                        print("⚠️ Could not find view in annotationCache for ghosted user: \(userId)")
-                        print("🧾 Current annotationCache keys: \(self.annotationCache.keys)")
-                    }
+            onGhost: { [weak self] userId in
+                Task { [weak self] in
+                    guard let self else { return }
+                    self.ghostedFriendIds.insert(userId)
+                    self.removeZombieAnnotations(for: userId)
                 }
             }
         )
 
         friendManager.onRefetch = { [weak self] userId, coordinate in
-            Task { @MainActor in
-                self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
+            Task { [weak self] in
+                guard let self = self,
+                      let friend = self.friendManager.friends[userId],
+                      friend.is_ghost != true else {
+                    return
+                }
+                await self.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
             }
         }
 
+        self.startZombieSweeper()
         friendManager.startGhostRefreshTimer(interval: 30)
 
         NotificationCenter.default.addObserver(forName: .didToggleGhostMode, object: nil, queue: .main) { [weak self] _ in
-            if let location = self?.locationController.locationManager.location {
-                Task {
-                    await self?.locationController.uploadUserLocation(location)
-                }
+            Task { [weak self] in
+                guard let self = self else { return }
+                guard let location = await self.locationController.locationManager.location else { return }
+                await self.locationController.uploadUserLocation(location)
             }
         }
 
         NotificationCenter.default.addObserver(forName: .didExternallyUpdateGhostStatus, object: nil, queue: .main) { [weak self] _ in
-            Task {
-                await self?.friendManager.fetchInitialFriends()
-                await self?.renderInitialFriendPins()
+            Task { [weak self] in
+                guard let self else { return }
+                await self.friendManager.fetchInitialFriends()
+                await self.renderInitialFriendPins()
             }
         }
     }
 
     // MARK: - Render or Update Friend Pins
-    private func handleFriendLocationUpdate(userId: String, coordinate: CLLocationCoordinate2D) {
-        guard let friend = friendManager.friends[userId] else {
-            print("⚠️ Friend not found in cache for id: \(userId)")
+    func handleFriendLocationUpdate(userId: String, coordinate: CLLocationCoordinate2D) async {
+        guard let friend = friendManager.friends[userId] else { return }
+
+        removeZombieAnnotations(for: userId)
+
+        if friend.is_ghost == true {
+            ghostedFriendIds.insert(userId)
             return
         }
 
         let mapView = mapController.mapView
 
-        if let existing = annotationCache[userId] {
-            MapAvatarRenderer.update(on: mapView, view: existing, newCoordinate: coordinate)
-        } else {
-            Task.detached(priority: .background) {
-                var image: UIImage? = nil
-
-                if let urlStr = friend.photo_url, let url = URL(string: urlStr) {
-                    do {
-                        let (data, _) = try await URLSession.shared.data(from: url)
-                        image = UIImage(data: data)
-                    } catch {
-                        print("⚠️ Failed to load friend photo: \(error)")
-                    }
-                }
-
-                let pin = UserPinData(
-                    id: friend.friend_id,
-                    name: friend.first_name,
-                    photoURL: friend.photo_url,
-                    coordinate: coordinate
-                )
-
-                await MainActor.run {
-                    if let existing = self.annotationCache[userId] {
-                        self.mapController.mapView.viewAnnotations.remove(existing)
-                    }
-
-                    if let rendered = MapAvatarRenderer.render(
-                        on: mapView,
-                        user: pin,
-                        image: image,
-                        target: self,
-                        tapAction: #selector(self.handleTap(_:))
-                    ) {
-                        self.annotationCache[userId] = rendered
-                    }
-                }
-            }
-        }
-        
-        if friend.is_ghost == true {
-            print("🛑 Skipping ghost user update for: \(friend.friend_id)")
-            if let view = self.annotationCache[userId] {
-                self.mapController.mapView.viewAnnotations.remove(view)
-                self.annotationCache.removeValue(forKey: userId)
-                print("🔥 Removed manually in fallback from handleFriendLocationUpdate: \(userId)")
-            }
+        if annotationCache[userId] != nil {
+            print("🛑 Skipping rendering — already exists in cache: \(userId)")
             return
         }
 
+        var image: UIImage? = nil
+        if let urlStr = friend.photo_url, let url = URL(string: urlStr) {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                image = UIImage(data: data)
+            } catch {
+                print("⚠️ Failed to load friend photo: \(error)")
+            }
+        }
+
+        let pin = UserPinData(
+            id: friend.friend_id,
+            name: friend.first_name,
+            photoURL: friend.photo_url,
+            coordinate: coordinate
+        )
+
+        if ghostedFriendIds.contains(userId) {
+            print("👻 Skipping rendering because user is ghosted: \(userId)")
+            return
+        }
+
+        if let view = MapAvatarRenderer.render(
+            on: mapView,
+            user: pin,
+            image: image,
+            target: self,
+            tapAction: #selector(self.handleTap(_:))
+        ) {
+            view.accessibilityIdentifier = userId
+            annotationCache[userId] = view
+        }
     }
 
+    // MARK: - Zombie Cleanup
+    private func removeZombieAnnotations(for userId: String) {
+        guard let annotationManager = mapController.mapView.viewAnnotations else { return }
+
+        for annotation in annotationManager.allAnnotations {
+            let view = annotation.view
+
+            if view.accessibilityIdentifier == userId {
+                annotationManager.remove(view)
+                annotationCache.removeValue(forKey: userId)
+                print("💀 Removed zombie annotation for user: \(userId)")
+                continue
+            }
+        }
+    }
+
+    private func startZombieSweeper(interval: TimeInterval = 15) {
+        Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+
+            Task { @MainActor in
+                for (userId, view) in self.annotationCache {
+                    let isMissing = self.friendManager.friends[userId] == nil
+                    let isGhost = self.friendManager.friends[userId]?.is_ghost == true
+
+                    if isMissing || isGhost {
+                        self.mapController.mapView.viewAnnotations?.remove(view)
+                        self.annotationCache.removeValue(forKey: userId)
+                        print("🧹 Swept zombie annotation: \(userId)")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Render User Pin
     func renderCurrentUserPin() async {
         guard let name = profileStore.firstName, !name.isEmpty else { return }
 
         let mapView = mapController.mapView
-        let center = mapView.cameraState.center
+        let center = mapView.mapboxMap.cameraState.center
 
         let pin = UserPinData(
             id: profileStore.userId ?? UUID().uuidString,
@@ -174,20 +204,19 @@ final class MapOrchestrator: ObservableObject {
             target: self,
             tapAction: #selector(self.handleTap(_:))
         ) {
-            self.annotationCache[pin.id] = view
+            view.accessibilityIdentifier = pin.id
+            annotationCache[pin.id] = view
         }
     }
 
     func renderInitialFriendPins() async {
-        for (id, friend) in self.friendManager.friends {
+        for (id, friend) in friendManager.friends {
             guard let lat = friend.latitude,
                   let lng = friend.longitude,
                   friend.is_ghost == false else { continue }
 
             let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-            await MainActor.run {
-                self.handleFriendLocationUpdate(userId: id, coordinate: coord)
-            }
+            await handleFriendLocationUpdate(userId: id, coordinate: coord)
         }
     }
 
@@ -203,15 +232,20 @@ final class MapOrchestrator: ObservableObject {
             name: .didTapUserAnnotation,
             object: nil,
             userInfo: isCurrentUser
-                ? ["userId": profileStore.userId ?? "unknown"]
+                ? ["userId": profileStore.userId ?? "unknown" as Any]
                 : ["friend": friend]
         )
 
-        let coordinate = CLLocationCoordinate2D(latitude: friend.latitude ?? 0, longitude: friend.longitude ?? 0)
+        let coordinate = CLLocationCoordinate2D(
+            latitude: friend.latitude ?? 0,
+            longitude: friend.longitude ?? 0
+        )
+
         mapController.mapView.camera.ease(
             to: CameraOptions(center: coordinate, zoom: 17),
-            duration: 1.0,
+            duration: 1.2,
             curve: .easeInOut
         )
     }
 }
+
