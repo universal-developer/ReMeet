@@ -78,9 +78,10 @@ final class FriendLocationManager: ObservableObject {
                 }
 
                 if isGhost {
-                    DispatchQueue.main.async {
+                    await MainActor.run {
                         self.friends.removeValue(forKey: userId)
                         onGhost(userId)
+                        print("📥 Realtime update received for: \(userId), is_ghost=\(record["is_ghost"])")
                     }
                     continue
                 }

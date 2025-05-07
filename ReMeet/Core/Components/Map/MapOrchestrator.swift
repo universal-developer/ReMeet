@@ -52,13 +52,16 @@ final class MapOrchestrator: ObservableObject {
 
         friendManager.listenForLiveUpdates(
             onUpdate: { [weak self] (userId, coordinate) in
-                Task { await self?.handleFriendLocationUpdate(userId: userId, coordinate: coordinate) }
-            },
-            onGhost: { [weak self] userId in
                 Task { [weak self] in
                     guard let self else { return }
-                    self.ghostedFriendIds.insert(userId)
-                    self.removeZombieAnnotations(for: userId)
+                    await self.handleFriendLocationUpdate(userId: userId, coordinate: coordinate)
+                }
+            },
+            onGhost: { [weak self] userId in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    print("👻 onGhost triggered for: \(userId)")
+                    await self.removeZombieAnnotations(for: userId)
                 }
             }
         )
@@ -79,9 +82,13 @@ final class MapOrchestrator: ObservableObject {
 
         NotificationCenter.default.addObserver(forName: .didToggleGhostMode, object: nil, queue: .main) { [weak self] _ in
             Task { [weak self] in
-                guard let self = self else { return }
+                guard let self else { return }
                 guard let location = await self.locationController.locationManager.location else { return }
                 await self.locationController.uploadUserLocation(location)
+
+                for (id, friend) in self.friendManager.friends where friend.is_ghost == true {
+                    await self.removeZombieAnnotations(for: id)
+                }
             }
         }
 
@@ -96,20 +103,24 @@ final class MapOrchestrator: ObservableObject {
 
     // MARK: - Render or Update Friend Pins
     func handleFriendLocationUpdate(userId: String, coordinate: CLLocationCoordinate2D) async {
-        guard let friend = friendManager.friends[userId] else { return }
-
-        removeZombieAnnotations(for: userId)
-
-        if friend.is_ghost == true {
-            ghostedFriendIds.insert(userId)
+        guard let friend = friendManager.friends[userId], friend.is_ghost != true else {
+            await removeZombieAnnotations(for: userId)
             return
         }
 
+        await removeZombieAnnotations(for: userId)
+
         let mapView = mapController.mapView
 
-        if annotationCache[userId] != nil {
-            print("🛑 Skipping rendering — already exists in cache: \(userId)")
-            return
+        if let cachedView = annotationCache[userId] {
+            let isStillVisible = mapView.viewAnnotations.allAnnotations.contains { $0.view == cachedView }
+            if isStillVisible {
+                print("🛑 Skipping rendering — already exists and visible: \(userId)")
+                return
+            } else {
+                annotationCache.removeValue(forKey: userId)
+                print("🧼 Cached annotation stale — removing \(userId)")
+            }
         }
 
         var image: UIImage? = nil
@@ -129,11 +140,6 @@ final class MapOrchestrator: ObservableObject {
             coordinate: coordinate
         )
 
-        if ghostedFriendIds.contains(userId) {
-            print("👻 Skipping rendering because user is ghosted: \(userId)")
-            return
-        }
-
         if let view = MapAvatarRenderer.render(
             on: mapView,
             user: pin,
@@ -147,17 +153,15 @@ final class MapOrchestrator: ObservableObject {
     }
 
     // MARK: - Zombie Cleanup
-    private func removeZombieAnnotations(for userId: String) {
+    private func removeZombieAnnotations(for userId: String) async {
         guard let annotationManager = mapController.mapView.viewAnnotations else { return }
 
         for annotation in annotationManager.allAnnotations {
             let view = annotation.view
-
             if view.accessibilityIdentifier == userId {
                 annotationManager.remove(view)
                 annotationCache.removeValue(forKey: userId)
                 print("💀 Removed zombie annotation for user: \(userId)")
-                continue
             }
         }
     }
@@ -165,12 +169,10 @@ final class MapOrchestrator: ObservableObject {
     private func startZombieSweeper(interval: TimeInterval = 15) {
         Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             guard let self else { return }
-
             Task { @MainActor in
                 for (userId, view) in self.annotationCache {
                     let isMissing = self.friendManager.friends[userId] == nil
                     let isGhost = self.friendManager.friends[userId]?.is_ghost == true
-
                     if isMissing || isGhost {
                         self.mapController.mapView.viewAnnotations?.remove(view)
                         self.annotationCache.removeValue(forKey: userId)
@@ -248,4 +250,3 @@ final class MapOrchestrator: ObservableObject {
         )
     }
 }
-

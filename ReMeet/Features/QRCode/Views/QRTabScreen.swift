@@ -80,7 +80,7 @@ struct QRTabScreen: View {
                         .fontWeight(.semibold)
                         .padding(.top, 15)
 
-                    Text("WhatsApp contact")
+                    Text("ReMeet contact")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .padding(.top, 4)
