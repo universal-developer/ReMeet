@@ -18,12 +18,12 @@ struct QRCodeService {
     ) -> UIImage? {
         do {
             var doc = try QRCode.Document(utf8String: string, errorCorrection: .high)
-            
+
             // Style
             doc.design.backgroundColor(backgroundColor.cgColor)
             doc.design.foregroundColor(foregroundColor.cgColor)
             doc.design.shape.onPixels = QRCode.PixelShape.RoundedPath()
-            
+
             // Add logo if available
             if let logoImage = logo?.cgImage {
                 doc.logoTemplate = QRCode.LogoTemplate(
@@ -34,7 +34,7 @@ struct QRCodeService {
                     )
                 )
             }
-            
+
             // Output a UIImage
             return try doc.uiImage(CGSize(width: size, height: size))
         } catch {

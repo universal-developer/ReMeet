@@ -81,7 +81,15 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
 
-        captureSession.startRunning()
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.captureSession.startRunning()
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.captureSession.stopRunning()
+        }
+
+
     }
 
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {

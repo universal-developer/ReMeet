@@ -11,8 +11,8 @@ import QRCode
 struct QRTabScreen: View {
     @State private var selectedTab: Tab = .myCode
     @State private var myQRCodeImage: UIImage?
-
     @EnvironmentObject var profile: ProfileStore
+    @Environment(\.colorScheme) var colorScheme
 
     enum Tab {
         case scan
@@ -31,6 +31,12 @@ struct QRTabScreen: View {
                 }
             } else {
                 myQRCodeCard
+                    .onChange(of: colorScheme) { _ in
+                        generateMyQRCode()
+                    }
+                    .onAppear {
+                        generateMyQRCode()
+                    }
             }
 
             Spacer()
@@ -47,7 +53,7 @@ struct QRTabScreen: View {
                     .foregroundColor(selectedTab == .scan ? .primary : .gray)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .background(selectedTab == .scan ? Color.primary.opacity(0.1) : Color.clear)
+                    .background(selectedTab == .scan ? tabBackground : Color.clear)
                     .cornerRadius(10)
             }
 
@@ -56,12 +62,16 @@ struct QRTabScreen: View {
                     .foregroundColor(selectedTab == .myCode ? .primary : .gray)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .background(selectedTab == .myCode ? Color.primary.opacity(0.1) : Color.clear)
+                    .background(selectedTab == .myCode ? tabBackground : Color.clear)
                     .cornerRadius(10)
             }
         }
         .padding(.horizontal)
         .padding(.top, 16)
+    }
+
+    private var tabBackground: Color {
+        colorScheme == .dark ? Color.white.opacity(0.1) : Color.primary.opacity(0.1)
     }
 
     private var myQRCodeCard: some View {
@@ -70,7 +80,7 @@ struct QRTabScreen: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.white)
+                    .fill(colorScheme == .dark ? Color(.secondarySystemBackground) : Color.white)
                     .frame(width: 320, height: 450)
                     .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
 
@@ -82,7 +92,7 @@ struct QRTabScreen: View {
 
                     Text("ReMeet contact")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                         .padding(.top, 4)
                         .padding(.bottom, 24)
 
@@ -95,7 +105,6 @@ struct QRTabScreen: View {
                             .padding(.bottom, 30)
                     } else {
                         ProgressView()
-                            .onAppear(perform: generateMyQRCode)
                             .frame(width: 220, height: 220)
                             .padding(.bottom, 30)
                     }
@@ -113,7 +122,7 @@ struct QRTabScreen: View {
     private var profileImage: some View {
         ZStack {
             Circle()
-                .fill(Color.white)
+                .fill(colorScheme == .dark ? Color(.systemBackground) : Color.white)
                 .frame(width: 76, height: 76)
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
 
@@ -130,7 +139,7 @@ struct QRTabScreen: View {
                     .overlay(
                         Text(initials)
                             .font(.title2)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                     )
             }
         }
@@ -145,10 +154,13 @@ struct QRTabScreen: View {
 
                 print("🔗 QR code link: \(link)")
 
+                let fg = colorScheme == .dark ? UIColor.white : UIColor.black
+                let bg = colorScheme == .dark ? UIColor.black : UIColor.white
+
                 myQRCodeImage = QRCodeService.generate(
                     from: link,
-                    foregroundColor: .black,
-                    backgroundColor: .white,
+                    foregroundColor: fg,
+                    backgroundColor: bg,
                     logo: UIImage(named: "Logo")
                 )
             } catch {

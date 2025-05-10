@@ -9,11 +9,13 @@ import SwiftUI
 
 struct SplashScreenView: View {
     @Binding var isActive: Bool
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ZStack {
-            Color.white
-                .ignoresSafeArea()
+            colorScheme == .dark
+            ? Color.black.ignoresSafeArea()
+            : Color.white.ignoresSafeArea()
 
             VStack {
                 Text("ReMeet")

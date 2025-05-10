@@ -25,21 +25,23 @@ final class MapAvatarRenderer {
     ) -> UIView? {
         let initials = String(user.name.prefix(1)).uppercased()
 
-        let annotationView = AnnotationFactory.makeAnnotationView(
-            initials: initials,
+        let annotationView = AnnotationFactory.makeStackedAvatarView(
             image: image,
+            name: user.name,
             userId: user.id,
             target: target,
             action: tapAction
         )
 
+
         let options = ViewAnnotationOptions(
             geometry: Point(user.coordinate),
             width: 50,
-            height: 50,
+            height: 70,
             allowOverlap: true,
             anchor: .bottom
         )
+
 
         do {
             try mapView.viewAnnotations.add(annotationView, options: options)

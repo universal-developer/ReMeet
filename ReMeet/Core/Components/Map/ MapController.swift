@@ -29,10 +29,15 @@ final class MapController: ObservableObject {
             ? CameraOptions(center: userCoord, zoom: adjustedZoom)
             : CameraOptions(zoom: 13)
 
+        let currentStyle: StyleURI = UITraitCollection.current.userInterfaceStyle == .dark
+            ? .dark
+            : .light
+
         let mapInitOptions = MapInitOptions(
             cameraOptions: initialCamera,
-            styleURI: .streets
+            styleURI: currentStyle
         )
+
 
         self.mapView = MapView(frame: UIScreen.main.bounds, mapInitOptions: mapInitOptions)
 
