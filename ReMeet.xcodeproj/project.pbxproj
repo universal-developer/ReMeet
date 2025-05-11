@@ -75,6 +75,11 @@
 			path = ReMeetUITests;
 			sourceTree = "<group>";
 		};
+		4B4EA3042DD1691E004FF95D /* supabase */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = supabase;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +129,7 @@
 				4B1363C42D4CC44E000B21B0 /* ReMeetUITests */,
 				4B5F45D12D89E69200B1CE1E /* Frameworks */,
 				4B1363A62D4CC44E000B21B0 /* Products */,
+				4B4EA3042DD1691E004FF95D /* supabase */,
 			);
 			sourceTree = "<group>";
 		};
@@ -161,6 +167,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				4B1363A72D4CC44E000B21B0 /* ReMeet */,
+				4B4EA3042DD1691E004FF95D /* supabase */,
 			);
 			name = ReMeet;
 			packageProductDependencies = (

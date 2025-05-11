@@ -151,6 +151,7 @@ struct QRTabScreen: View {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let userId = session.user.id.uuidString
                 let link = "https://api.remeet.app/u/\(userId)"
+                //let link = "https://api.remeet.app/u/5f4e7b15-220b-4414-8748-1ef1e8a324ff"
 
                 print("🔗 QR code link: \(link)")
 
@@ -176,20 +177,93 @@ struct QRTabScreen: View {
             do {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let myId = session.user.id.uuidString
-                let friendId = value
 
+                // 1. Extract UUID from scanned QR code link
+                guard let scannedURL = URL(string: value),
+                      let uuidString = scannedURL.pathComponents.last,
+                      UUID(uuidString: uuidString) != nil else {
+                    print("❌ Invalid QR code format or UUID.")
+                    return
+                }
+
+                let friendId = uuidString
+
+                // 2. Check if friendship already exists
+                do {
+                    _ = try await SupabaseManager.shared.client.database
+                        .from("friends")
+                        .select("friend_id")
+                        .eq("user_id", value: myId)
+                        .eq("friend_id", value: friendId)
+                        .single()
+                        .execute()
+
+                    // If this succeeds, friend already exists
+                    print("⚠️ Friend \(friendId) already added.")
+
+                    // Optional: fetch first name
+                    do {
+                        let friendProfile = try await SupabaseManager.shared.client.database
+                            .from("profiles")
+                            .select("first_name")
+                            .eq("id", value: friendId)
+                            .limit(1)
+                            .execute()
+
+                        if let json = try? JSONSerialization.jsonObject(with: friendProfile.data) as? [String: Any],
+                           let name = json["first_name"] as? String {
+                            print("👤 Already connected with: \(name)")
+                        } else {
+                            print("👤 Already connected with this person.")
+                        }
+                    } catch {
+                        print("👤 Already connected, but couldn't fetch name: \(error)")
+                    }
+
+                    return // 💥 without this, you'd still insert again
+                } catch {
+                    print("🔎 No existing friendship found. Proceeding to insert.")
+                    // This is expected when the friend isn't found
+                }
+
+                // 3. Insert A → B
                 try await SupabaseManager.shared.client.database
                     .from("friends")
                     .insert([
-                        ["user_id": myId, "friend_id": friendId],
-                        ["user_id": friendId, "friend_id": myId]
+                        ["user_id": myId, "friend_id": friendId]
                     ])
                     .execute()
 
-                print("✅ Successfully added friend \(friendId)!")
+                print("✅ Added friend \(friendId) for user \(myId)")
+
+                // 4. Trigger mirror insert via Edge Function
+                let mirrorURL = URL(string: "https://qquleedmyqrpznddhsbv.functions.supabase.co/mirror_friendship")!
+                var request = URLRequest(url: mirrorURL)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                let payload: [String: String] = [
+                    "user_id": myId,
+                    "friend_id": friendId
+                ]
+                request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("📡 Mirror function status: \(httpResponse.statusCode)")
+                    if let responseText = String(data: data, encoding: .utf8) {
+                        print("📨 Mirror response: \(responseText)")
+                    }
+                }
+
             } catch {
-                print("❌ Failed to add friend: \(error)")
+                print("❌ Failed to add friend or call mirror: \(error)")
             }
         }
     }
+
+
+
+
 }
+ 
