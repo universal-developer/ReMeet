@@ -19,6 +19,7 @@ final class ProfileStore: ObservableObject {
     @Published var userImage: UIImage?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var profilePhotoURLs: [String] = []
 
 
     func load() async {
@@ -28,13 +29,14 @@ final class ProfileStore: ObservableObject {
 
             let profiles: [UserProfile] = try await SupabaseManager.shared.client
                 .from("profiles")
-                .select("first_name")
+                .select("first_name, age")
                 .eq("id", value: userId!)
                 .limit(1)
                 .execute()
                 .value
 
             firstName = profiles.first?.first_name
+            age = profiles.first?.age
 
             let photos: [UserPhoto] = try await SupabaseManager.shared.client
                 .from("user_photos")
@@ -46,6 +48,17 @@ final class ProfileStore: ObservableObject {
                 .value
 
             profilePhotoUrl = photos.first?.url
+            
+            let allPhotos: [UserPhoto] = try await SupabaseManager.shared.client
+                .from("user_photos")
+                .select("url")
+                .eq("user_id", value: userId!)
+                .order("created_at", ascending: true)
+                .execute()
+                .value
+
+            profilePhotoURLs = allPhotos.map { $0.url }
+
 
             if let urlStr = profilePhotoUrl, let url = URL(string: urlStr) {
                 let (data, _) = try await URLSession.shared.data(from: url)
@@ -60,6 +73,7 @@ final class ProfileStore: ObservableObject {
 
     struct UserProfile: Decodable {
         let first_name: String
+        let age: Int
     }
 
     struct UserPhoto: Decodable {

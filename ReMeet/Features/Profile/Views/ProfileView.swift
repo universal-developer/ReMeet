@@ -7,67 +7,71 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
-    
+    @State private var imageItems: [ImageItem] = []
+    @State private var showPhotoEditor = false
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack {
             if profile.isLoading {
                 ProgressView("Loading profile...")
-            } else if let error = profile.errorMessage {
-                Text("Error: \(error)").foregroundColor(.red)
             } else {
-                if let name = profile.firstName {
-                    Text(name)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                }
-
-                if let age = profile.age {
-                    Text("Age: \(age)")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                }
-
-                if let urlString = profile.profilePhotoUrl,
-                   let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 120, height: 120)
-                                .clipShape(Circle())
-                        case .failure:
-                            Image(systemName: "person.crop.circle.badge.exclamationmark")
-                                .resizable()
-                                .frame(width: 120, height: 120)
-                        @unknown default:
-                            EmptyView()
-                        }
+                ProfilePhotosCarousel()
+                
+                VStack {
+                    if let name = profile.firstName, let age = profile.age {
+                        Text("\(name), \(age)")
+                            .font(.title)
+                            .fontWeight(.bold)
                     }
-                }
-            }
 
-            Button("Reload Profile") {
-                Task {
-                    await profile.load()
+
+                    WrapTags(tags: ["Bachelors", "Gym rat", "Dog lover", "Big texter"])
+
+                    Button("Modify Profile") {
+                        showPhotoEditor = true
+                    }
+                    .padding(.top)
                 }
+                .padding()
             }
-            .padding(.top, 10)
 
             Spacer()
         }
-        .padding()
         .onAppear {
-            if profile.firstName == nil {
-                Task {
-                    await profile.load()
-                }
+            Task {
+                await profile.load()
+                print("🧪 name: \(profile.firstName ?? "nil"), age: \(profile.age.map(String.init) ?? "nil")")
+
+
+                // Load photo URLs into ImageItems
+                imageItems = await loadImageItems(from: profile.profilePhotoURLs)
             }
         }
+        .sheet(isPresented: $showPhotoEditor) {
+            PhotoEditorView(imageItems: $imageItems)
+        }
+    }
+
+    func loadImageItems(from urls: [String]) async -> [ImageItem] {
+        var items: [ImageItem] = []
+        for (i, urlString) in urls.enumerated() {
+            if let url = URL(string: urlString),
+               let data = try? Data(contentsOf: url),
+               let image = UIImage(data: data) {
+                items.append(ImageItem(image: image, isMain: i == 0))
+            }
+        }
+        return items
     }
 }
+
+
+#Preview {
+    ProfileView()
+        .environmentObject(ProfileStore())
+}
+
