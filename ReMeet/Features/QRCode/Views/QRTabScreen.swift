@@ -8,9 +8,22 @@
 import SwiftUI
 import QRCode
 
+struct ScannedUser: Identifiable, Equatable {
+    let id: String
+    let firstName: String
+    let image: UIImage?
+
+    static func == (lhs: ScannedUser, rhs: ScannedUser) -> Bool {
+        return lhs.id == rhs.id && lhs.firstName == rhs.firstName
+        // we intentionally ignore image comparison
+    }
+}
+
+
 struct QRTabScreen: View {
     @State private var selectedTab: Tab = .myCode
     @State private var myQRCodeImage: UIImage?
+    @State private var scannedUser: ScannedUser?
     @EnvironmentObject var profile: ProfileStore
     @Environment(\.colorScheme) var colorScheme
 
@@ -20,30 +33,40 @@ struct QRTabScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topTabBar
-
-            Divider()
-
-            if selectedTab == .scan {
-                QRScannerView { scannedValue in
-                    handleScannedQRCode(scannedValue)
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                topTabBar
+                
+                Divider()
+                
+                if selectedTab == .scan {
+                    QRScannerView { scannedValue in
+                        handleScannedQRCode(scannedValue)
+                    }
+                } else {
+                    myQRCodeCard
+                        .onChange(of: colorScheme) { _ in
+                            generateMyQRCode()
+                        }
+                        .onAppear {
+                            generateMyQRCode()
+                        }
                 }
-            } else {
-                myQRCodeCard
-                    .onChange(of: colorScheme) { _ in
-                        generateMyQRCode()
-                    }
-                    .onAppear {
-                        generateMyQRCode()
-                    }
+                
+                Spacer()
             }
-
-            Spacer()
+            if let user = scannedUser {
+                BottomProfileCard(user: user) {
+                    print("💬 Send message to \(user.firstName)")
+                }
+                .transition(.move(edge: .bottom))
+                .animation(.spring(), value: scannedUser)
+            }
         }
         .navigationTitle("QR Code")
         .navigationBarTitleDisplayMode(.inline)
     }
+    
 
     private var topTabBar: some View {
         HStack {
@@ -213,6 +236,13 @@ struct QRTabScreen: View {
                         if let json = try? JSONSerialization.jsonObject(with: friendProfile.data) as? [String: Any],
                            let name = json["first_name"] as? String {
                             print("👤 Already connected with: \(name)")
+                            await MainActor.run {
+                                withAnimation {
+                                    self.scannedUser = ScannedUser(id: friendId, firstName: name, image: nil)
+                                }
+                            }
+
+
                         } else {
                             print("👤 Already connected with this person.")
                         }
@@ -233,8 +263,11 @@ struct QRTabScreen: View {
                         ["user_id": myId, "friend_id": friendId]
                     ])
                     .execute()
-
+                
                 print("✅ Added friend \(friendId) for user \(myId)")
+                await MainActor.run {
+                    self.scannedUser = ScannedUser(id: friendId, firstName: "New Friend", image: nil)
+                }
 
                 // 4. Trigger mirror insert via Edge Function
                 let mirrorURL = URL(string: "https://qquleedmyqrpznddhsbv.functions.supabase.co/mirror_friendship")!

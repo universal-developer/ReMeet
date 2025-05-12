@@ -42,6 +42,8 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
     var previewLayer: AVCaptureVideoPreviewLayer!
     var delegate: ScannerViewControllerDelegate?
 
+    private var previewView: UIView!
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -68,7 +70,6 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
 
         if captureSession.canAddOutput(metadataOutput) {
             captureSession.addOutput(metadataOutput)
-
             metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.qr]
         } else {
@@ -76,21 +77,34 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
             return
         }
 
+        // Set up preview layer inside a container view
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.layer.bounds
         previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
+
+        previewView = UIView()
+        previewView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(previewView)
+
+        NSLayoutConstraint.activate([
+            previewView.topAnchor.constraint(equalTo: view.topAnchor),
+            previewView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            previewView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            previewView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        previewLayer.frame = previewView.bounds
+        previewView.layer.addSublayer(previewLayer)
+        view.addSubview(previewView)
 
         DispatchQueue.global(qos: .userInitiated).async {
             self.captureSession.startRunning()
         }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.captureSession.stopRunning()
-        }
-
-
     }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer.frame = previewView.bounds
+    }
+
 
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         if let metadataObject = metadataObjects.first,
@@ -98,8 +112,6 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
            let stringValue = readableObject.stringValue {
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             delegate?.didFind(code: stringValue)
-            
-            // Let SwiftUI handle the view dismissal if needed
         }
     }
 
