@@ -12,9 +12,9 @@ struct WelcomeView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @Environment(\.colorScheme) var colorScheme
     
-    @State private var path: [OnboardingRoute] = []
-    
     var orchestrator: MapOrchestrator
+    @Binding var path: [OnboardingRoute]
+
     
     var body: some View {
         NavigationStack(path: $path) {

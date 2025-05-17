@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PhotosStepView: View {
     @ObservedObject var model: OnboardingModel
@@ -38,7 +39,14 @@ struct PhotosStepView: View {
                 title: "Continue",
                 action: {
                     print("📷 Photos selected: \(model.userPhotos.count)")
+                    
                     if isValid {
+                        for (index, image) in model.userPhotos.enumerated() {
+                            let key = "user_photo_\(index)"
+                            ImageCacheManager.shared.setToRAM(image, forKey: key)
+                            ImageCacheManager.shared.saveToDisk(image, forKey: key)
+                        }
+
                         model.moveToNextStep()
                     }
                 },

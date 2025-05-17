@@ -23,6 +23,11 @@ class OnboardingModel: ObservableObject {
     @Published var birthYear: String = ""
     @Published var userPhotos: [UIImage] = []
     @Published var selectedImage: UIImage?
+    @Published var selectedPersonality: Set<SelectableTag> = []
+    @Published var selectedLanguages: Set<SelectableTag> = []
+    @Published var selectedLifestyle: Set<SelectableTag> = []
+    @Published var freeformPassions: [String] = []
+
 
 
     // MARK: - State
@@ -276,6 +281,12 @@ class OnboardingModel: ObservableObject {
 
                 print("🎉 All photos saved.")
                 DispatchQueue.main.async { completion(true) }
+                
+                let tagLabels = selectedPersonality.map(\.label)
+                              + selectedLanguages.map(\.label)
+                              + selectedLifestyle.map(\.label)
+                              + freeformPassions
+
 
             } catch {
                 print("❌ Failed during saveUserProfile: \(error.localizedDescription)")

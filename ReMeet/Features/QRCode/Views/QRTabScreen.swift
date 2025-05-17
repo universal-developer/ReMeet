@@ -149,7 +149,8 @@ struct QRTabScreen: View {
                 .frame(width: 76, height: 76)
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
 
-            if let image = profile.userImage {
+            if let image = ImageCacheManager.shared.getFromRAM(forKey: "user_photo_main")
+                ?? ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

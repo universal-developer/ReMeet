@@ -6,72 +6,64 @@
 //
 
 import SwiftUI
-
-import SwiftUI
+import UIKit
+import Foundation
 
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
-    @State private var imageItems: [ImageItem] = []
+    @State private var selectedPersonality: Set<SelectableTag> = []
     @State private var showPhotoEditor = false
+
+    let personalityTags = [
+        SelectableTag(label: "Introvert", iconName: "moon"),
+        SelectableTag(label: "Extrovert", iconName: "sun.max"),
+        SelectableTag(label: "Funny", iconName: "face.smiling"),
+        SelectableTag(label: "Open-minded", iconName: "sparkles")
+    ]
+
+    var imageItems: [ImageItem] {
+        profile.cachedProfileImages
+    }
 
     var body: some View {
         VStack {
             if profile.isLoading {
                 ProgressView("Loading profile...")
             } else {
-                ProfilePhotosCarousel()
-                
-                VStack {
-                    if let name = profile.firstName, let age = profile.age {
-                        Text("\(name), \(age)")
-                            .font(.title)
-                            .fontWeight(.bold)
+                ScrollView {
+                    ProfilePhotosCarousel(images: imageItems)
+
+                    VStack {
+                        if let name = profile.firstName, let age = profile.age {
+                            Text("\(name), \(age)")
+                                .font(.title)
+                                .fontWeight(.bold)
+                        }
+
+                        TagCategorySelector(
+                            tags: personalityTags,
+                            selectionLimit: 3,
+                            selected: $selectedPersonality
+                        )
+
+                        Button("Modify Profile") {
+                            showPhotoEditor = true
+                        }
+                        .padding(.top)
                     }
-
-
-                    WrapTags(tags: ["Bachelors", "Gym rat", "Dog lover", "Big texter"])
-
-                    Button("Modify Profile") {
-                        showPhotoEditor = true
-                    }
-                    .padding(.top)
+                    .padding()
                 }
-                .padding()
             }
 
             Spacer()
         }
-        .onAppear {
-            Task {
-                await profile.load()
-                print("🧪 name: \(profile.firstName ?? "nil"), age: \(profile.age.map(String.init) ?? "nil")")
-
-
-                // Load photo URLs into ImageItems
-                imageItems = await loadImageItems(from: profile.profilePhotoURLs)
-            }
-        }
         .sheet(isPresented: $showPhotoEditor) {
-            PhotoEditorView(imageItems: $imageItems)
+            PhotoEditorView(imageItems: .constant(imageItems))
         }
-    }
-
-    func loadImageItems(from urls: [String]) async -> [ImageItem] {
-        var items: [ImageItem] = []
-        for (i, urlString) in urls.enumerated() {
-            if let url = URL(string: urlString),
-               let data = try? Data(contentsOf: url),
-               let image = UIImage(data: data) {
-                items.append(ImageItem(image: image, isMain: i == 0))
-            }
-        }
-        return items
     }
 }
-
 
 #Preview {
     ProfileView()
         .environmentObject(ProfileStore())
 }
-

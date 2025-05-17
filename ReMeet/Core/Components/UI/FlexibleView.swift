@@ -16,47 +16,42 @@ struct FlexibleView<Data: RandomAccessCollection, Content: View>: View where Dat
 
     @State private var totalHeight: CGFloat = .zero
 
-    init(
-        availableWidth: CGFloat,
-        data: Data,
-        spacing: CGFloat,
-        alignment: HorizontalAlignment,
-        @ViewBuilder content: @escaping (Data.Element) -> Content // ✅ This is key
-    ) {
-        self.availableWidth = availableWidth
-        self.data = data
-        self.spacing = spacing
-        self.alignment = alignment
-        self.content = content
-    }
-
     var body: some View {
         VStack(alignment: alignment, spacing: spacing) {
-            GeometryReader { geometry in
-                self.generateContent(in: geometry)
-            }
+            self.generateContent()
         }
         .frame(height: totalHeight)
     }
 
-    private func generateContent(in g: GeometryProxy) -> some View {
+    private func generateContent() -> some View {
+        return GeometryReader { geometry in
+            self.generateWrappedContent(in: geometry)
+        }
+    }
+
+    private func generateWrappedContent(in g: GeometryProxy) -> some View {
         var width = CGFloat.zero
         var height = CGFloat.zero
 
         return ZStack(alignment: .topLeading) {
-            ForEach(self.data, id: \.self) { item in
+            ForEach(Array(self.data), id: \.self) { item in
                 content(item)
-                    .padding([.horizontal, .vertical], 4)
-                    .alignmentGuide(.leading, computeValue: { dimension in
-                        if abs(width - dimension.width) > g.size.width {
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+                    .alignmentGuide(.leading) { dimension in
+                        if (abs(width - dimension.width) > g.size.width) {
                             width = 0
                             height -= dimension.height + spacing
                         }
                         let result = width
-                        width -= dimension.width + spacing
+                        if item == self.data.last {
+                            width = 0 // reset for next redraw
+                        } else {
+                            width -= dimension.width + spacing
+                        }
                         return result
-                    })
-                    .alignmentGuide(.top, computeValue: { _ in height })
+                    }
+                    .alignmentGuide(.top) { _ in height }
             }
         }
         .background(viewHeightReader($totalHeight))

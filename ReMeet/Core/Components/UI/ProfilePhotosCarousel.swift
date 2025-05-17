@@ -8,42 +8,31 @@
 import SwiftUI
 
 struct ProfilePhotosCarousel: View {
-    @EnvironmentObject var profile: ProfileStore
+    let images: [ImageItem]
 
     var body: some View {
         GeometryReader { geo in
-            TabView {
-                ForEach(profile.profilePhotoURLs, id: \.self) { urlString in
-                    AsyncImage(url: URL(string: urlString)) { phase in
-                        switch phase {
-                        case .empty:
-                            Color.gray
-                                .opacity(0.1)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                                .overlay(ProgressView())
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                                .clipped()
-                        case .failure:
-                            Image(systemName: "photo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 80, height: 80)
-                                .foregroundColor(.gray)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
-                    // ❌ NO padding here!
+            if images.isEmpty {
+                ZStack {
+                    Color.gray.opacity(0.1)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                    ProgressView("Loading photos…")
                 }
+            } else {
+                TabView {
+                    ForEach(images.indices, id: \.self) { index in
+                        Image(uiImage: images[index].image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+                .indexViewStyle(.page(backgroundDisplayMode: .interactive))
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
         }
         .frame(height: 400)
-        .edgesIgnoringSafeArea(.horizontal) // ✅ edge-to-edge width
+        .edgesIgnoringSafeArea(.horizontal)
     }
 }
