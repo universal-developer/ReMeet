@@ -7,39 +7,42 @@
 
 import SwiftUI
 
-struct BottomProfileCard: View {
+struct ProfilePreviewCard: View {
     let user: ScannedUser
-    var onMessage: () -> Void
+    let primaryActionLabel: String
+    var onPrimaryAction: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             if let image = user.image {
                 Image(uiImage: image)
                     .resizable()
-                    .frame(width: 60, height: 60)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 72, height: 72)
                     .clipShape(Circle())
+                    .shadow(radius: 4)
             } else {
                 Circle()
                     .fill(Color.gray.opacity(0.3))
-                    .frame(width: 60, height: 60)
+                    .frame(width: 72, height: 72)
                     .overlay(Text(user.firstName.prefix(1)).font(.title))
             }
 
             Text(user.firstName)
                 .font(.headline)
+                .padding(.bottom, 4)
 
-            Button(action: onMessage) {
-                Text("Send a message")
+            Button(action: onPrimaryAction) {
+                Text(primaryActionLabel)
                     .font(.subheadline)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
                     .background(Color.accentColor)
                     .foregroundColor(.white)
                     .clipShape(Capsule())
             }
         }
-        .padding(.top, 20)
-        .padding(.bottom, 32)
+        .padding()
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .cornerRadius(20)
@@ -47,15 +50,3 @@ struct BottomProfileCard: View {
         .shadow(radius: 10)
     }
 }
-
-#Preview {
-    BottomProfileCard(
-        user: ScannedUser(
-            id: "demo-user-id",
-            firstName: "Alex",
-            image: nil
-        ),
-        onMessage: { print("Tapped send message") }
-    )
-}
-

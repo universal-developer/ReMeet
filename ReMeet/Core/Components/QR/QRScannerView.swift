@@ -106,14 +106,24 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
     }
 
 
+    private var hasScanned = false // top-level var
+
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
+        guard !hasScanned else { return }
+
         if let metadataObject = metadataObjects.first,
            let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
            let stringValue = readableObject.stringValue {
+            hasScanned = true
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             delegate?.didFind(code: stringValue)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                self.hasScanned = false // allow scanning again later
+            }
         }
     }
+
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
