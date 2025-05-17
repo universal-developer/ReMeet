@@ -38,6 +38,10 @@ struct ProfileView: View {
                             Text("\(name), \(age)")
                                 .font(.title)
                                 .fontWeight(.bold)
+                        } else {
+                            Text("Your name, age")
+                                .font(.title)
+                                .fontWeight(.bold)
                         }
 
                         TagCategorySelector(

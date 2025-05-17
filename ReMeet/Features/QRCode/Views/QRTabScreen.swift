@@ -5,6 +5,9 @@
 //  Created by Artush on 27/04/2025.
 //
 
+// QRTabScreen.swift
+// ReMeet – QR screen redesigned for show-first-share UX
+
 import SwiftUI
 import QRCode
 
@@ -14,185 +17,198 @@ struct ScannedUser: Identifiable, Equatable {
     let image: UIImage?
 
     static func == (lhs: ScannedUser, rhs: ScannedUser) -> Bool {
-        return lhs.id == rhs.id && lhs.firstName == rhs.firstName
-        // we intentionally ignore image comparison
+        lhs.id == rhs.id && lhs.firstName == rhs.firstName
     }
 }
 
-
 struct QRTabScreen: View {
-    @State private var selectedTab: Tab = .myCode
-    @State private var myQRCodeImage: UIImage?
-    @State private var scannedUser: ScannedUser?
     @EnvironmentObject var profile: ProfileStore
     @Environment(\.colorScheme) var colorScheme
-
-    enum Tab {
-        case scan
-        case myCode
-    }
+    @State private var myQRCodeImage: UIImage?
+    @State private var showScanner = false
+    @State private var showFriends = false
+    @State private var scannedUser: ScannedUser?
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                topTabBar
-                
-                Divider()
-                
-                if selectedTab == .scan {
-                    QRScannerView { scannedValue in
-                        handleScannedQRCode(scannedValue)
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Spacer()
+
+                // QR Code Box
+                VStack(spacing: 12) {
+                    
+                    /*(if let img = ImageCacheManager.shared.getFromRAM(forKey: "user_photo_main")
+                        ?? ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                        Image(uiImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 70, height: 70)
+                            .clipShape(Circle())
+                    } else if let initials = profile.firstName?.prefix(1).uppercased() {
+                        Circle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 70, height: 70)
+                            .overlay(
+                                Text(initials)
+                                    .font(.title2)
+                                    .foregroundColor(.primary)
+                            )
+                    }*/
+
+                    
+                    Text(profile.firstName ?? "You")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+   
+                    if let qr = myQRCodeImage {
+                        ZStack {
+                            Image(uiImage: qr)
+                                .resizable()
+                                .interpolation(.none)
+                                .scaledToFit()
+                                .frame(width: 220, height: 220)
+
+                            if let img = ImageCacheManager.shared.getFromRAM(forKey: "user_photo_main")
+                                ?? ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .shadow(radius: 3)
+                            } else if let initials = profile.firstName?.prefix(1).uppercased() {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: 64, height: 64)
+                                    .overlay(
+                                        Text(initials)
+                                            .font(.title2)
+                                            .foregroundColor(.primary)
+                                    )
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            }
+                        }
+                    } else {
+                        ProgressView()
+                            .frame(width: 220, height: 220)
+                            .padding()
                     }
-                } else {
-                    myQRCodeCard
-                        .onChange(of: colorScheme) { _ in
-                            generateMyQRCode()
-                        }
-                        .onAppear {
-                            generateMyQRCode()
-                        }
+                    
+                    Text("Show this to connect instantly")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
             }
+            .onAppear {
+                generateMyQRCode()
+            }
+
+            // Floating buttons
+            VStack {
+                Spacer()
+                HStack(spacing: 16) {
+                    // Scan someone button
+                    Button(action: { showScanner = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "camera.viewfinder")
+                                .font(.system(size: 18, weight: .semibold))
+                            Text("Scan")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.8))
+                        .clipShape(Capsule())
+                    }
+
+                    // Friends button
+                    Button(action: { showFriends = true }) {
+                        Image(systemName: "person.2.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.black.opacity(0.7))
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.bottom, 40)
+            }
+
+            // Scanned user mini modal
             if let user = scannedUser {
                 BottomProfileCard(user: user) {
-                    print("💬 Send message to \(user.firstName)")
+                    print("💬 Message \(user.firstName)")
                 }
                 .transition(.move(edge: .bottom))
                 .animation(.spring(), value: scannedUser)
             }
         }
-        .navigationTitle("QR Code")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-    
-
-    private var topTabBar: some View {
-        HStack {
-            Button(action: { withAnimation { selectedTab = .scan } }) {
-                Text("Scan")
-                    .fontWeight(selectedTab == .scan ? .bold : .regular)
-                    .foregroundColor(selectedTab == .scan ? .primary : .gray)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(selectedTab == .scan ? tabBackground : Color.clear)
-                    .cornerRadius(10)
+        .sheet(isPresented: $showScanner) {
+            QRScannerView { scannedValue in
+                handleScannedQRCode(scannedValue)
+                showScanner = false
             }
-
-            Button(action: { withAnimation { selectedTab = .myCode } }) {
-                Text("My QR Code")
-                    .foregroundColor(selectedTab == .myCode ? .primary : .gray)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(selectedTab == .myCode ? tabBackground : Color.clear)
-                    .cornerRadius(10)
-            }
+            .ignoresSafeArea()
         }
-        .padding(.horizontal)
-        .padding(.top, 16)
-    }
-
-    private var tabBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.1) : Color.primary.opacity(0.1)
-    }
-
-    private var myQRCodeCard: some View {
-        VStack {
-            Spacer()
-
-            ZStack {
-                RoundedRectangle(cornerRadius: 25)
-                    .fill(colorScheme == .dark ? Color(.secondarySystemBackground) : Color.white)
-                    .frame(width: 320, height: 450)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-
-                VStack(spacing: 0) {
-                    Text(profile.firstName ?? "You")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .padding(.top, 15)
-
-                    Text("ReMeet contact")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                        .padding(.bottom, 24)
-
-                    if let qr = myQRCodeImage {
-                        Image(uiImage: qr)
-                            .resizable()
-                            .interpolation(.none)
-                            .scaledToFit()
-                            .frame(width: 220, height: 220)
-                            .padding(.bottom, 30)
-                    } else {
-                        ProgressView()
-                            .frame(width: 220, height: 220)
-                            .padding(.bottom, 30)
-                    }
-                }
-            }
-            .overlay(
-                profileImage
-                    .offset(y: -225)
-            )
-
-            Spacer()
+        .sheet(isPresented: $showFriends) {
+            Text("Friends screen placeholder")
+                .font(.title2)
+                .padding()
         }
     }
 
-    private var profileImage: some View {
-        ZStack {
-            Circle()
-                .fill(colorScheme == .dark ? Color(.systemBackground) : Color.white)
-                .frame(width: 76, height: 76)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-
-            if let image = ImageCacheManager.shared.getFromRAM(forKey: "user_photo_main")
-                ?? ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 70, height: 70)
-                    .clipShape(Circle())
-            } else if let initials = profile.firstName?.prefix(1).uppercased() {
-                Circle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 70, height: 70)
-                    .overlay(
-                        Text(initials)
-                            .font(.title2)
-                            .foregroundColor(.primary)
-                    )
-            }
+    private func generateMyQRCode(forceRefresh: Bool = false) {
+        // 1. Try cache first (unless forced to refresh)
+        if !forceRefresh,
+           let cachedQR = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main")
+            ?? ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
+            myQRCodeImage = cachedQR
+            return
         }
-    }
 
-    private func generateMyQRCode() {
+        // 2. Otherwise, generate and cache it
         Task {
             do {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let userId = session.user.id.uuidString
-                let link = "https://api.remeet.app/u/\(userId)"
-                //let link = "https://api.remeet.app/u/5f4e7b15-220b-4414-8748-1ef1e8a324ff"
-
-                print("🔗 QR code link: \(link)")
+                //let link = "https://api.remeet.app/u/\(userId)"
+                let link = "https://api.remeet.app/u/5f4e7b15-220b-4414-8748-1ef1e8a324ff"
 
                 let fg = colorScheme == .dark ? UIColor.white : UIColor.black
                 let bg = colorScheme == .dark ? UIColor.black : UIColor.white
 
-                myQRCodeImage = QRCodeService.generate(
+                let generatedQR = QRCodeService.generate(
                     from: link,
                     foregroundColor: fg,
                     backgroundColor: bg,
-                    logo: UIImage(named: "Logo")
+                    logo: nil // We'll overlay profile photo manually in SwiftUI
                 )
+
+                // Cache to memory and disk
+                if let qr = generatedQR {
+                    ImageCacheManager.shared.setToRAM(qr, forKey: "qr_code_main")
+                    ImageCacheManager.shared.saveToDisk(qr, forKey: "qr_code_main")
+                    await MainActor.run {
+                        myQRCodeImage = qr
+                    }
+                } else {
+                    print("❌ Failed to generate QR code image.")
+                }
+
             } catch {
-                print("❌ Failed to get user session for QR code generation: \(error)")
+                print("❌ QR code generation failed: \(error)")
             }
         }
     }
+
+
 
     private func handleScannedQRCode(_ value: String) {
         print("📸 Scanned QR Code: \(value)")
@@ -202,17 +218,15 @@ struct QRTabScreen: View {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let myId = session.user.id.uuidString
 
-                // 1. Extract UUID from scanned QR code link
                 guard let scannedURL = URL(string: value),
                       let uuidString = scannedURL.pathComponents.last,
                       UUID(uuidString: uuidString) != nil else {
-                    print("❌ Invalid QR code format or UUID.")
+                    print("❌ Invalid QR format")
                     return
                 }
 
                 let friendId = uuidString
 
-                // 2. Check if friendship already exists
                 do {
                     _ = try await SupabaseManager.shared.client.database
                         .from("friends")
@@ -222,82 +236,89 @@ struct QRTabScreen: View {
                         .single()
                         .execute()
 
-                    // If this succeeds, friend already exists
-                    print("⚠️ Friend \(friendId) already added.")
+                    let friendProfile = try await SupabaseManager.shared.client.database
+                        .from("profiles")
+                        .select("first_name")
+                        .eq("id", value: friendId)
+                        .limit(1)
+                        .execute()
 
-                    // Optional: fetch first name
-                    do {
-                        let friendProfile = try await SupabaseManager.shared.client.database
-                            .from("profiles")
-                            .select("first_name")
-                            .eq("id", value: friendId)
-                            .limit(1)
-                            .execute()
-
-                        if let json = try? JSONSerialization.jsonObject(with: friendProfile.data) as? [String: Any],
-                           let name = json["first_name"] as? String {
-                            print("👤 Already connected with: \(name)")
-                            await MainActor.run {
-                                withAnimation {
-                                    self.scannedUser = ScannedUser(id: friendId, firstName: name, image: nil)
-                                }
+                    if let json = try? JSONSerialization.jsonObject(with: friendProfile.data) as? [String: Any],
+                       let name = json["first_name"] as? String {
+                        await MainActor.run {
+                            withAnimation {
+                                self.scannedUser = ScannedUser(id: friendId, firstName: name, image: nil)
                             }
-
-
-                        } else {
-                            print("👤 Already connected with this person.")
                         }
-                    } catch {
-                        print("👤 Already connected, but couldn't fetch name: \(error)")
                     }
-
-                    return // 💥 without this, you'd still insert again
+                    return
                 } catch {
-                    print("🔎 No existing friendship found. Proceeding to insert.")
-                    // This is expected when the friend isn't found
+                    print("👥 Friend not found, inserting")
                 }
 
-                // 3. Insert A → B
                 try await SupabaseManager.shared.client.database
                     .from("friends")
-                    .insert([
-                        ["user_id": myId, "friend_id": friendId]
-                    ])
+                    .insert([["user_id": myId, "friend_id": friendId]])
                     .execute()
-                
-                print("✅ Added friend \(friendId) for user \(myId)")
-                await MainActor.run {
-                    self.scannedUser = ScannedUser(id: friendId, firstName: "New Friend", image: nil)
+
+                let friendProfile = try await SupabaseManager.shared.client.database
+                    .from("profiles")
+                    .select("first_name")
+                    .eq("id", value: friendId)
+                    .limit(1)
+                    .execute()
+
+                var name = "New Friend"
+                if let json = try? JSONSerialization.jsonObject(with: friendProfile.data) as? [String: Any],
+                   let parsedName = json["first_name"] as? String {
+                    name = parsedName
                 }
 
-                // 4. Trigger mirror insert via Edge Function
+                // Fetch profile photo
+                let photoResult = try await SupabaseManager.shared.client.database
+                    .from("user_photos")
+                    .select("url")
+                    .eq("user_id", value: friendId)
+                    .eq("is_main", value: true)
+                    .limit(1)
+                    .single()
+                    .execute()
+
+                var image: UIImage? = nil
+
+                if let json = try? JSONSerialization.jsonObject(with: photoResult.data) as? [String: Any],
+                   let urlString = json["url"] as? String,
+                   let url = URL(string: urlString),
+                   let data = try? Data(contentsOf: url),
+                   let uiImage = UIImage(data: data) {
+                    image = uiImage
+                }
+
+                await MainActor.run {
+                    withAnimation {
+                        self.scannedUser = ScannedUser(id: friendId, firstName: name, image: image)
+                    }
+                }
+
+
                 let mirrorURL = URL(string: "https://qquleedmyqrpznddhsbv.functions.supabase.co/mirror_friendship")!
                 var request = URLRequest(url: mirrorURL)
                 request.httpMethod = "POST"
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-                let payload: [String: String] = [
-                    "user_id": myId,
-                    "friend_id": friendId
-                ]
+                let payload: [String: String] = ["user_id": myId, "friend_id": friendId]
                 request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-
                 let (data, response) = try await URLSession.shared.data(for: request)
+
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("📡 Mirror function status: \(httpResponse.statusCode)")
-                    if let responseText = String(data: data, encoding: .utf8) {
-                        print("📨 Mirror response: \(responseText)")
-                    }
+                    print("📡 Mirror status: \(httpResponse.statusCode)")
+                    print("📨 Mirror response: \(String(data: data, encoding: .utf8) ?? "")")
                 }
 
             } catch {
-                print("❌ Failed to add friend or call mirror: \(error)")
+                print("❌ QR processing failed: \(error)")
             }
         }
     }
-
-
-
-
 }
- 
+
+
