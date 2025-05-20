@@ -13,6 +13,7 @@ struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var selectedPersonality: Set<SelectableTag> = []
     @State private var showPhotoEditor = false
+    @State private var selectedImage: ImageItem?
 
     let personalityTags = [
         SelectableTag(label: "Introvert", iconName: "moon"),
@@ -31,38 +32,59 @@ struct ProfileView: View {
                 ProgressView("Loading profile...")
             } else {
                 ScrollView {
-                    ProfilePhotosCarousel(images: imageItems)
+                    VStack(alignment: .leading, spacing: 20) {
 
-                    VStack {
-                        if let name = profile.firstName, let age = profile.age {
-                            Text("\(name), \(age)")
-                                .font(.title)
-                                .fontWeight(.bold)
-                        } else {
-                            Text("Your name, age")
-                                .font(.title)
-                                .fontWeight(.bold)
-                        }
-
-                        TagCategorySelector(
-                            tags: personalityTags,
-                            selectionLimit: 3,
-                            selected: $selectedPersonality
-                        )
-
-                        Button("Modify Profile") {
+                        PhotoGridView(images: imageItems, onPlaceholderTapped: {
                             showPhotoEditor = true
+                        })
+
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            if let name = profile.firstName, let age = profile.age {
+                                Text("\(name), \(age)")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                            } else {
+                                Text("Your name, age")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                            }
+
+                            TagCategorySelector(
+                                tags: personalityTags,
+                                selectionLimit: 3,
+                                selected: $selectedPersonality
+                            )
+
+                            Button("Edit Profile Info") {
+                                showPhotoEditor = true
+                            }
+                            .padding(.top)
                         }
-                        .padding(.top)
+                        .padding(.horizontal)
                     }
-                    .padding()
+                    .padding(.top)
                 }
             }
 
             Spacer()
         }
         .sheet(isPresented: $showPhotoEditor) {
-            PhotoEditorView(imageItems: .constant(imageItems))
+            PhotoEditorView(imageItems: .constant([]))
+        }
+    }
+
+    @ViewBuilder
+    private func placeholderCell(size: CGFloat, width: CGFloat? = nil) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5]))
+                .frame(width: width ?? size, height: size)
+                .foregroundColor(.gray)
+
+            Image(systemName: "plus")
+                .font(.title2)
+                .foregroundColor(.gray)
         }
     }
 }

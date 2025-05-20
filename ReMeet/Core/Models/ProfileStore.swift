@@ -157,8 +157,6 @@ final class ProfileStore: ObservableObject {
     }
 
 
-
-
     struct UserProfile: Decodable {
         let first_name: String
         let age: Int
