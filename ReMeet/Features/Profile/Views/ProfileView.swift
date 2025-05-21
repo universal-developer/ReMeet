@@ -70,8 +70,10 @@ struct ProfileView: View {
             Spacer()
         }
         .sheet(isPresented: $showPhotoEditor) {
-            PhotoEditorView(imageItems: .constant([]))
+            PhotoGridEditorSheet()
+                .environmentObject(profile)
         }
+
     }
 
     @ViewBuilder

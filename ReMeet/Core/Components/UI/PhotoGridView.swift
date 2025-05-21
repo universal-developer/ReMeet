@@ -10,6 +10,7 @@ import SwiftUI
 struct PhotoGridView: View {
     let images: [ImageItem]
     let onPlaceholderTapped: () -> Void
+    
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

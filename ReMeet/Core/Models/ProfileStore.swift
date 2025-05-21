@@ -22,8 +22,6 @@ final class ProfileStore: ObservableObject {
     @Published var profilePhotoURLs: [String] = []
     @Published var cachedProfileImages: [ImageItem] = []
 
-
-
     func loadEverything() async {
         await MainActor.run {
             self.isLoading = true
