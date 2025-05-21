@@ -12,8 +12,7 @@ import Foundation
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var selectedPersonality: Set<SelectableTag> = []
-    @State private var showPhotoEditor = false
-    @State private var selectedImage: ImageItem?
+    @State private var profilePhotos: [ImageItem] = []
 
     let personalityTags = [
         SelectableTag(label: "Introvert", iconName: "moon"),
@@ -22,10 +21,6 @@ struct ProfileView: View {
         SelectableTag(label: "Open-minded", iconName: "sparkles")
     ]
 
-    var imageItems: [ImageItem] {
-        profile.cachedProfileImages
-    }
-
     var body: some View {
         VStack {
             if profile.isLoading {
@@ -33,12 +28,10 @@ struct ProfileView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
+                        
+                        ProfilePhotoGrid(images: $profilePhotos)
 
-                        PhotoGridView(images: imageItems, onPlaceholderTapped: {
-                            showPhotoEditor = true
-                        })
-
-
+                        // User Info
                         VStack(alignment: .leading, spacing: 12) {
                             if let name = profile.firstName, let age = profile.age {
                                 Text("\(name), \(age)")
@@ -50,14 +43,16 @@ struct ProfileView: View {
                                     .fontWeight(.bold)
                             }
 
+                            // Personality tags
                             TagCategorySelector(
                                 tags: personalityTags,
                                 selectionLimit: 3,
                                 selected: $selectedPersonality
                             )
 
+                            // Placeholder for future editable fields
                             Button("Edit Profile Info") {
-                                showPhotoEditor = true
+                                // Optional: hook to future sheet or editor
                             }
                             .padding(.top)
                         }
@@ -69,24 +64,11 @@ struct ProfileView: View {
 
             Spacer()
         }
-        .sheet(isPresented: $showPhotoEditor) {
-            PhotoGridEditorSheet()
-                .environmentObject(profile)
+        .onAppear {
+            profilePhotos = profile.cachedProfileImages
         }
-
-    }
-
-    @ViewBuilder
-    private func placeholderCell(size: CGFloat, width: CGFloat? = nil) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5]))
-                .frame(width: width ?? size, height: size)
-                .foregroundColor(.gray)
-
-            Image(systemName: "plus")
-                .font(.title2)
-                .foregroundColor(.gray)
+        .onChange(of: profilePhotos) { newValue in
+            profile.cachedProfileImages = newValue
         }
     }
 }
