@@ -1,8 +1,9 @@
 //
+//
 //  SupabasePhotoUploader.swift
 //  ReMeet
 //
-//  Created by ChatGPT on 22/05/2025.
+//  Created by Artush on 22/05/2025.
 
 import Foundation
 import UIKit
@@ -11,7 +12,11 @@ import Supabase
 struct SupabaseUserPhoto: Codable {
     let user_id: UUID
     let url: String
-    let is_main: Bool
+    var is_main: Bool
+}
+
+struct PhotoUploadPayload: Encodable {
+    let p_data: [SupabaseUserPhoto]
 }
 
 class SupabasePhotoUploader {
@@ -24,55 +29,98 @@ class SupabasePhotoUploader {
     private var debounceTask: Task<Void, Never>?
 
     func uploadUpdatedPhotos(_ incomingImages: [ImageItem], for userID: UUID) async {
-        var images = incomingImages // make mutable copy to allow mutation
+        print("📸 Starting upload for \(incomingImages.count) images...")
 
         do {
-            // Ensure exactly one image is marked as main
-            let mainCount = images.filter { $0.isMain }.count
-            if mainCount != 1 {
-                for i in 0..<images.count {
-                    images[i].isMain = (i == 0)
+            // Step 1: Upload images in parallel
+            typealias UploadResult = (index: Int, url: String)
+            var uploadResults: [UploadResult] = []
+
+            await withTaskGroup(of: UploadResult?.self) { group in
+                for (index, imageItem) in incomingImages.enumerated() {
+                    print("📤 Preparing image #\(index) - isMain: \(imageItem.isMain)")
+
+                    group.addTask {
+                        guard let data = imageItem.image.jpegData(compressionQuality: 0.4) else {
+                            print("❌ [\(index)] Failed to convert image to JPEG")
+                            return nil
+                        }
+
+                        let fileName = "\(userID.uuidString)/photo_\(index)_\(UUID().uuidString).jpg"
+                        let publicURL = "\(SupabaseManager.shared.publicStorageUrlBase)/\(self.bucket)/\(fileName)"
+
+                        do {
+                            try await SupabaseManager.shared.client.storage
+                                .from(self.bucket)
+                                .upload(
+                                    path: fileName,
+                                    file: data,
+                                    options: FileOptions(contentType: "image/jpeg", upsert: true)
+                                )
+
+                            print("✅ [\(index)] Uploaded to \(publicURL)")
+                            return (index, publicURL)
+
+                        } catch {
+                            print("❌ [\(index)] Upload failed: \(error.localizedDescription)")
+                            return nil
+                        }
+                    }
+                }
+
+                for await result in group {
+                    if let item = result {
+                        uploadResults.append(item)
+                    }
                 }
             }
 
-            // 1. Delete old records
-            try await SupabaseManager.shared.client.database.from(table)
-                .delete()
-                .eq("user_id", value: userID.uuidString)
+            print("📦 Finished uploads. Processing \(uploadResults.count) successful items...")
+
+            // Step 2: Build DB records aligned with original input
+            var photoRecords: [SupabaseUserPhoto] = []
+
+            for result in uploadResults.sorted(by: { $0.index < $1.index }) {
+                let imageItem = incomingImages[result.index]
+
+                print("📝 Preparing DB record [\(result.index)] isMain: \(imageItem.isMain) url: \(result.url)")
+
+                photoRecords.append(SupabaseUserPhoto(
+                    user_id: userID,
+                    url: result.url,
+                    is_main: imageItem.isMain
+                ))
+            }
+
+            // Step 3: Guarantee exactly one main photo
+            let mainCount = photoRecords.filter(\.is_main).count
+            if mainCount != 1 {
+                print("⚠️ Found \(mainCount) main photos! Fixing to ensure exactly 1.")
+                for i in 0..<photoRecords.count {
+                    photoRecords[i].is_main = (i == 0)
+                }
+            }
+
+            print("📤 Final DB photo records:")
+            for (i, record) in photoRecords.enumerated() {
+                print("   \(i): \(record.url) | isMain: \(record.is_main)")
+            }
+
+            // Step 4: Send to Supabase RPC
+            let payload = PhotoUploadPayload(p_data: photoRecords)
+
+            try await SupabaseManager.shared.client
+                .rpc("overwrite_user_photos", params: payload)
                 .execute()
 
-            print("🧹 Deleted existing user photo rows")
+            print("✅ RPC overwrite_user_photos executed successfully")
 
-            for (index, imageItem) in images.enumerated() {
-                guard let data = imageItem.image.jpegData(compressionQuality: 0.4) else {
-                    print("⚠️ Could not convert image #\(index)")
-                    continue
-                }
-
-                let fileName = "\(userID.uuidString)/photo_\(index)_\(UUID().uuidString).jpg"
-
-                // Upload to Supabase storage
-                try await SupabaseManager.shared.client.storage
-                    .from(bucket)
-                    .upload(path: fileName, file: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
-
-                let publicURL = "\(SupabaseManager.shared.publicStorageUrlBase)/\(bucket)/\(fileName)"
-                let photo = SupabaseUserPhoto(user_id: userID, url: publicURL, is_main: imageItem.isMain)
-
-                try await SupabaseManager.shared.client.database.from(table)
-                    .insert([photo], returning: .minimal)
-                    .execute()
-
-                print("✅ Saved photo #\(index)")
-            }
-
-            print("🎉 All profile photos updated on Supabase")
         } catch {
             print("❌ Upload failed: \(error.localizedDescription)")
         }
     }
 
-        func syncPhotosIfChanged(current: [ImageItem], original: [ImageItem], userID: UUID) {
+    func syncPhotosIfChanged(current: [ImageItem], original: [ImageItem], userID: UUID) {
         debounceTask?.cancel()
         debounceTask = Task(priority: .background) { [originalCopy = original] in
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second debounce
