@@ -1,12 +1,12 @@
 //
 //  ProfilePhotoGrid.swift
 //  ReMeet
-//
 //  Created by Artush on 22/05/2025.
-//
 
 import SwiftUI
 import PhotosUI
+
+// Removed duplicate ImageItem definition; it's reused from ImageGrid.swift
 
 struct ProfilePhotoGrid: View {
     @Binding var images: [ImageItem]
@@ -158,4 +158,12 @@ struct ProfilePhotoGrid: View {
         draggedIndex = nil
         return true
     }
+}
+
+func imagesHaveChanged(original: [ImageItem], current: [ImageItem]) -> Bool {
+    guard original.count == current.count else { return true }
+    for (a, b) in zip(original, current) {
+        if a != b || a.isMain != b.isMain { return true }
+    }
+    return false
 }

@@ -13,6 +13,7 @@ struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var selectedPersonality: Set<SelectableTag> = []
     @State private var profilePhotos: [ImageItem] = []
+    @State private var originalPhotos: [ImageItem] = []
 
     let personalityTags = [
         SelectableTag(label: "Introvert", iconName: "moon"),
@@ -66,9 +67,20 @@ struct ProfileView: View {
         }
         .onAppear {
             profilePhotos = profile.cachedProfileImages
+            originalPhotos = profile.cachedProfileImages
         }
-        .onChange(of: profilePhotos) { newValue in
-            profile.cachedProfileImages = newValue
+        .onDisappear {
+            Task {
+                if imagesHaveChanged(original: originalPhotos, current: profilePhotos),
+                   let userId = SupabaseManager.shared.client.auth.currentUser?.id {
+                    await SupabasePhotoUploader.shared.uploadUpdatedPhotos(profilePhotos, for: userId)
+                }
+            }
+        }
+        .onChange(of: profilePhotos) { newPhotos in
+            if let userId = SupabaseManager.shared.client.auth.currentUser?.id {
+                SupabasePhotoUploader.shared.syncPhotosIfChanged(current: newPhotos, original: originalPhotos, userID: userId)
+            }
         }
     }
 }

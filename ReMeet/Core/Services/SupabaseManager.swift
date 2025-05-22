@@ -37,9 +37,6 @@ class SupabaseManager {
     }
 
 
-
-
-
     private init() {
         supabaseURL = URL(string: Secrets.supabaseURL)!
         client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: Secrets.supabaseKey)
