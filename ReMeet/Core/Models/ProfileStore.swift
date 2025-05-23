@@ -29,12 +29,10 @@ final class ProfileStore: ObservableObject {
         }
 
         do {
-            // 1. Get session and user ID
             let session = try await SupabaseManager.shared.client.auth.session
             let userId = session.user.id.uuidString
             self.userId = userId
 
-            // 2. Load profile basic info
             let profiles: [UserProfile] = try await SupabaseManager.shared.client
                 .from("profiles")
                 .select("first_name, age")
@@ -48,7 +46,6 @@ final class ProfileStore: ObservableObject {
                 self.age = profiles.first?.age
             }
 
-            // 3. Load main profile photo (for QR & tab)
             let mainPhoto: [UserPhoto] = try await SupabaseManager.shared.client
                 .from("user_photos")
                 .select("url")
@@ -68,10 +65,10 @@ final class ProfileStore: ObservableObject {
                     let key = "user_photo_main"
                     ImageCacheManager.shared.setToRAM(image, forKey: key)
                     ImageCacheManager.shared.saveToDisk(image, forKey: key)
+                    NotificationCenter.default.post(name: .didUpdateMainProfilePhoto, object: nil)
                 }
             }
 
-            // 4. Load all profile photos
             let allPhotos: [UserPhoto] = try await SupabaseManager.shared.client
                 .from("user_photos")
                 .select("url")
@@ -86,7 +83,6 @@ final class ProfileStore: ObservableObject {
                 self.profilePhotoURLs = urls
             }
 
-            // 5. Load each image from cache or Supabase if missing
             var imageItems: [ImageItem] = []
 
             for (i, urlStr) in urls.enumerated() {
@@ -94,13 +90,26 @@ final class ProfileStore: ObservableObject {
                 let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
 
                 if let ramImage = ImageCacheManager.shared.getFromRAM(forKey: key) {
-                    imageItems.append(ImageItem(image: ramImage, isMain: i == 0))
+                    imageItems.append(ImageItem(image: ramImage, isMain: i == 0, url: urlStr))
+
+                    if i == 0 {
+                        await MainActor.run { self.userImage = ramImage }
+                        ImageCacheManager.shared.setToRAM(ramImage, forKey: "user_photo_main")
+                        ImageCacheManager.shared.saveToDisk(ramImage, forKey: "user_photo_main")
+                        NotificationCenter.default.post(name: .didUpdateMainProfilePhoto, object: nil)
+                    }
                     continue
                 }
 
                 if let diskImage = ImageCacheManager.shared.loadFromDisk(forKey: key) {
                     ImageCacheManager.shared.setToRAM(diskImage, forKey: key)
-                    imageItems.append(ImageItem(image: diskImage, isMain: i == 0))
+                    imageItems.append(ImageItem(image: diskImage, isMain: i == 0, url: urlStr))
+                    if i == 0 {
+                        await MainActor.run { self.userImage = diskImage }
+                        ImageCacheManager.shared.setToRAM(diskImage, forKey: "user_photo_main")
+                        ImageCacheManager.shared.saveToDisk(diskImage, forKey: "user_photo_main")
+                        NotificationCenter.default.post(name: .didUpdateMainProfilePhoto, object: nil)
+                    }
                     continue
                 }
 
@@ -109,7 +118,13 @@ final class ProfileStore: ObservableObject {
                     if let image = UIImage(data: data) {
                         ImageCacheManager.shared.setToRAM(image, forKey: key)
                         ImageCacheManager.shared.saveToDisk(image, forKey: key)
-                        imageItems.append(ImageItem(image: image, isMain: i == 0))
+                        imageItems.append(ImageItem(image: image, isMain: i == 0, url: urlStr))
+                        if i == 0 {
+                            await MainActor.run { self.userImage = image }
+                            ImageCacheManager.shared.setToRAM(image, forKey: "user_photo_main")
+                            ImageCacheManager.shared.saveToDisk(image, forKey: "user_photo_main")
+                            NotificationCenter.default.post(name: .didUpdateMainProfilePhoto, object: nil)
+                        }
                         print("📸 Cached profile photo \(i)")
                     }
                 } catch {
@@ -131,7 +146,7 @@ final class ProfileStore: ObservableObject {
             }
         }
     }
-    
+
     func loadBasicProfile() async {
         do {
             let session = try await SupabaseManager.shared.client.auth.session
@@ -153,7 +168,6 @@ final class ProfileStore: ObservableObject {
             print("❌ Basic profile load failed: \(error)")
         }
     }
-
 
     struct UserProfile: Decodable {
         let first_name: String

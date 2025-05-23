@@ -188,6 +188,11 @@ struct QRTabScreen: View {
                             }
                         }
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+                        if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                            profile.userImage = refreshed
+                        }
+                    }
                     .padding()
                     .frame(maxWidth: 280)
                     .background(.ultraThinMaterial)

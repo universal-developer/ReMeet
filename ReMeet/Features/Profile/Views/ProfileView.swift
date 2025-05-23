@@ -23,63 +23,103 @@ struct ProfileView: View {
     ]
 
     var body: some View {
-        VStack {
-            if profile.isLoading {
-                ProgressView("Loading profile...")
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        
-                        ProfilePhotoGrid(images: $profilePhotos)
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
 
-                        // User Info
-                        VStack(alignment: .leading, spacing: 12) {
-                            if let name = profile.firstName, let age = profile.age {
-                                Text("\(name), \(age)")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                            } else {
-                                Text("Your name, age")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                            }
+            VStack(spacing: 20) {
+                // Header bar (compact)
+                HStack {
+                    // Left button (e.g. search or events)
+                    Button(action: {
+                        // TODO: handle search or event action
+                    }) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
 
-                            // Personality tags
-                            TagCategorySelector(
-                                tags: personalityTags,
-                                selectionLimit: 3,
-                                selected: $selectedPersonality
-                            )
+                    Spacer()
 
-                            // Placeholder for future editable fields
-                            Button("Edit Profile Info") {
-                                // Optional: hook to future sheet or editor
+                    Text("Profile")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+
+                    Spacer()
+
+                    // Right button (notifications)
+                    Button(action: {
+                        // TODO: handle notifications
+                    }) {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                
+                VStack {
+                    if profile.isLoading {
+                        ProgressView("Loading profile...")
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .center, spacing: 20) {
+
+                                ProfilePhotoGrid(images: $profilePhotos)
+                                    .environmentObject(profile)
+
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if let name = profile.firstName, let age = profile.age {
+                                        Text("\(name), \(age)")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                    } else {
+                                        Text("Your name, age")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                    }
+
+                                    TagCategorySelector(
+                                        tags: personalityTags,
+                                        selectionLimit: 3,
+                                        selected: $selectedPersonality
+                                    )
+
+                                    Button("Edit Profile Info") {
+                                        // Hook to edit sheet
+                                    }
+                                    .padding(.top)
+                                }
+                                .padding(.horizontal)
                             }
                             .padding(.top)
                         }
-                        .padding(.horizontal)
                     }
-                    .padding(.top)
-                }
-            }
 
-            Spacer()
-        }
-        .onAppear {
-            profilePhotos = profile.cachedProfileImages
-            originalPhotos = profile.cachedProfileImages
-        }
-        .onDisappear {
-            Task {
-                if imagesHaveChanged(original: originalPhotos, current: profilePhotos),
-                   let userId = SupabaseManager.shared.client.auth.currentUser?.id {
-                    await SupabasePhotoUploader.shared.uploadUpdatedPhotos(profilePhotos, for: userId)
+                    Spacer()
                 }
-            }
-        }
-        .onChange(of: profilePhotos) { newPhotos in
-            if let userId = SupabaseManager.shared.client.auth.currentUser?.id {
-                SupabasePhotoUploader.shared.syncPhotosIfChanged(current: newPhotos, original: originalPhotos, userID: userId)
+                .onAppear {
+                    profilePhotos = profile.cachedProfileImages
+                    originalPhotos = profile.cachedProfileImages
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+                    if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                        profile.userImage = refreshed
+                    }
+                }
+                .onDisappear {
+                    Task {
+                        if imagesHaveChanged(original: originalPhotos, current: profilePhotos),
+                           let userId = SupabaseManager.shared.client.auth.currentUser?.id {
+                            await SupabasePhotoUploader.shared.uploadUpdatedPhotos(profilePhotos, for: userId)
+                        }
+                    }
+                }
+                .onChange(of: profilePhotos) { newPhotos in
+                    if let userId = SupabaseManager.shared.client.auth.currentUser?.id {
+                        SupabasePhotoUploader.shared.syncPhotosIfChanged(current: newPhotos, original: originalPhotos, userID: userId)
+                    }
+                }
             }
         }
     }

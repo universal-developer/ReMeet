@@ -8,15 +8,7 @@
 import SwiftUI
 import PhotosUI
 
-struct ImageItem: Identifiable, Equatable {
-    let id = UUID()
-    var image: UIImage
-    var isMain: Bool = false
-    
-    static func == (lhs: ImageItem, rhs: ImageItem) -> Bool {
-        lhs.id == rhs.id
-    }
-}
+
 
 struct ImageGrid: View {
     @Binding var images: [ImageItem]

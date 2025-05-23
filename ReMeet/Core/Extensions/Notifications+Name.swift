@@ -14,5 +14,6 @@ extension Notification.Name {
     static let shouldUpdateUserAnnotation = Notification.Name("shouldUpdateUserAnnotation")
     static let didToggleGhostMode = Notification.Name("didToggleGhostMode")
     static let didExternallyUpdateGhostStatus = Notification.Name("didExternallyUpdateGhostStatus")
+    static let didUpdateMainProfilePhoto = Notification.Name("didUpdateMainProfilePhoto")
 }
 
