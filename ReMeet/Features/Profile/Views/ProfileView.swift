@@ -101,6 +101,10 @@ struct ProfileView: View {
                 .onAppear {
                     profilePhotos = profile.cachedProfileImages
                     originalPhotos = profile.cachedProfileImages
+
+                    Task {
+                        await profile.refreshUserPhotoFromNetwork()
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
                     if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
@@ -108,16 +112,15 @@ struct ProfileView: View {
                     }
                 }
                 .onDisappear {
-                    Task {
-                        if imagesHaveChanged(original: originalPhotos, current: profilePhotos),
-                           let userId = SupabaseManager.shared.client.auth.currentUser?.id {
-                            await SupabasePhotoUploader.shared.uploadUpdatedPhotos(profilePhotos, for: userId)
-                        }
+                    Task.detached {
+                        await profile.syncReorderedPhotos(profilePhotos)
                     }
+
                 }
                 .onChange(of: profilePhotos) { newPhotos in
-                    if let userId = SupabaseManager.shared.client.auth.currentUser?.id {
-                        SupabasePhotoUploader.shared.syncPhotosIfChanged(current: newPhotos, original: originalPhotos, userID: userId)
+                    profile.cachedProfileImages = newPhotos // live update
+                    Task.detached {
+                        await profile.syncReorderedPhotos(newPhotos) // async background sync
                     }
                 }
             }

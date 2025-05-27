@@ -54,8 +54,7 @@ struct QRTabScreen: View {
                                 .scaledToFit()
                                 .frame(width: 220, height: 220)
 
-                            if let img = ImageCacheManager.shared.getFromRAM(forKey: "user_photo_main")
-                                ?? ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                            if let img = profile.userImage {
                                 Image(uiImage: img)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
@@ -131,7 +130,15 @@ struct QRTabScreen: View {
                 }
                 .padding(.bottom, 32)
             }
-            .onAppear { generateMyQRCode() }
+            .onAppear {
+                generateMyQRCode()
+                
+                Task {
+                    await profile.refreshUserPhotoFromNetwork()
+                }
+            }
+
+
         }
         .fullScreenCover(isPresented: $showScanner) {
             ZStack(alignment: .topLeading) {
@@ -210,6 +217,13 @@ struct QRTabScreen: View {
         }
     }
     private func generateMyQRCode(forceRefresh: Bool = false) {
+        if !forceRefresh,
+           let cached = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main") ??
+                        ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
+            myQRCodeImage = cached
+            return
+        }
+
         Task {
             do {
                 let session = try await SupabaseManager.shared.client.auth.session
@@ -220,118 +234,59 @@ struct QRTabScreen: View {
                 let fg = colorScheme == .dark ? UIColor.white : UIColor.black
                 let bg = colorScheme == .dark ? UIColor.black : UIColor.white
 
-                let generatedQR = QRCodeService.generate(
-                    from: link,
-                    foregroundColor: fg,
-                    backgroundColor: bg,
-                    logo: nil
-                )
-
-                if let qr = generatedQR {
+                if let qr = QRCodeService.generate(from: link, foregroundColor: fg, backgroundColor: bg) {
                     ImageCacheManager.shared.setToRAM(qr, forKey: "qr_code_main")
                     ImageCacheManager.shared.saveToDisk(qr, forKey: "qr_code_main")
                     await MainActor.run { myQRCodeImage = qr }
-                } else {
-                    print("❌ Failed to generate QR code.")
                 }
-
             } catch {
                 print("❌ QR generation error: \(error)")
             }
         }
     }
 
+
     private func handleScannedQRCode(_ value: String) {
         print("📸 Scanned QR Code: \(value)")
 
         Task {
-            do {
-                let session = try await SupabaseManager.shared.client.auth.session
-                let myId = session.user.id.uuidString
+            guard let scannedURL = URL(string: value),
+                  let uuidString = scannedURL.pathComponents.last,
+                  UUID(uuidString: uuidString) != nil else {
+                print("❌ Invalid QR format")
+                return
+            }
 
-                guard let scannedURL = URL(string: value),
-                      let uuidString = scannedURL.pathComponents.last,
-                      UUID(uuidString: uuidString) != nil else {
-                    print("❌ Invalid QR format")
-                    return
-                }
-
-                let friendId = uuidString
-
-                let profileData = try await SupabaseManager.shared.client.database
-                    .from("profiles")
-                    .select("first_name")
-                    .eq("id", value: friendId)
-                    .limit(1)
-                    .execute()
-
-                var name = "New Friend"
-                if let array = try? JSONSerialization.jsonObject(with: profileData.data) as? [[String: Any]],
-                   let first = array.first,
-                   let parsedName = first["first_name"] as? String {
-                    name = parsedName
-                }
-
-                let photoResult = try await SupabaseManager.shared.client.database
-                    .from("user_photos")
-                    .select("url")
-                    .eq("user_id", value: friendId)
-                    .eq("is_main", value: true)
-                    .limit(1)
-                    .execute()
-
-                var image: UIImage? = nil
-                if let array = try? JSONSerialization.jsonObject(with: photoResult.data) as? [[String: Any]],
-                   let first = array.first,
-                   let urlString = first["url"] as? String,
-                   let url = URL(string: urlString),
-                   let data = try? Data(contentsOf: url),
-                   let uiImage = UIImage(data: data) {
-                    image = uiImage
-                }
-
+            let friendId = uuidString
+            if let minimal = await profile.fetchMinimalUser(userId: friendId) {
                 await MainActor.run {
                     withAnimation(.spring()) {
-                        scannedUser = ScannedUser(id: friendId, firstName: name, image: image)
+                        scannedUser = ScannedUser(id: minimal.id, firstName: minimal.firstName, image: minimal.image)
                     }
                 }
-
-            } catch {
-                print("❌ QR processing failed: \(error)")
             }
         }
     }
+
+
 
     private func confirmFriendAdd(_ user: ScannedUser) {
         Task {
             do {
                 let session = try await SupabaseManager.shared.client.auth.session
                 let myId = session.user.id.uuidString
-                let friendId = user.id
-
-                try await SupabaseManager.shared.client.database
-                    .from("friends")
-                    .insert(["user_id": myId, "friend_id": friendId])
-                    .execute()
-
-                let mirrorURL = URL(string: "https://qquleedmyqrpznddhsbv.functions.supabase.co/mirror_friendship")!
-                var request = URLRequest(url: mirrorURL)
-                request.httpMethod = "POST"
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                let payload: [String: String] = ["user_id": myId, "friend_id": friendId]
-                request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-                _ = try await URLSession.shared.data(for: request)
+                try await profile.confirmFriendAdd(myId: myId, friendId: user.id)
 
                 await MainActor.run {
                     withAnimation(.spring()) {
                         scannedUser = nil
                     }
                 }
-
             } catch {
                 print("❌ Confirm friend add failed: \(error)")
             }
         }
     }
+
 }
 
