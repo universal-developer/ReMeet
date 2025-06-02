@@ -132,13 +132,9 @@ struct QRTabScreen: View {
             }
             .onAppear {
                 generateMyQRCode()
-                
-                Task {
-                    await profile.refreshUserPhotoFromNetwork()
-                }
+
+                profile.loadCachedOrFetchUserPhoto()
             }
-
-
         }
         .fullScreenCover(isPresented: $showScanner) {
             ZStack(alignment: .topLeading) {
@@ -218,11 +214,11 @@ struct QRTabScreen: View {
     }
     private func generateMyQRCode(forceRefresh: Bool = false) {
         if !forceRefresh,
-           let cached = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main") ??
-                        ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
-            myQRCodeImage = cached
-            return
-        }
+              let cached = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main") ??
+                           ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
+               myQRCodeImage = cached
+               return
+           }
 
         Task {
             do {

@@ -36,7 +36,16 @@ final class ProfileStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var profilePhotoURLs: [String] = []
     @Published var cachedProfileImages: [ImageItem] = []
-    @Published var lastRefreshed: Date? = nil
+    @Published var hasLoadedOnce = false
+    
+    @AppStorage("profileLastRefreshed") private var lastRefreshedTime: Double = 0
+
+    var lastRefreshed: Date? {
+        get { lastRefreshedTime > 0 ? Date(timeIntervalSince1970: lastRefreshedTime) : nil }
+        set { lastRefreshedTime = newValue?.timeIntervalSince1970 ?? 0 }
+    }
+
+
 
     func loadEverything() async {
         await MainActor.run {
@@ -126,7 +135,10 @@ final class ProfileStore: ObservableObject {
             await MainActor.run {
                 self.cachedProfileImages = imageItems
                 self.isLoading = false
+                self.hasLoadedOnce = true
+                self.lastRefreshed = Date()
             }
+            
 
         } catch {
             await MainActor.run {
@@ -136,6 +148,7 @@ final class ProfileStore: ObservableObject {
             }
         }
     }
+
 
     func refreshUserPhotoFromNetwork() async {
         guard let userId = userId else { return }
@@ -190,13 +203,21 @@ final class ProfileStore: ObservableObject {
         guard let userID = userId, let uuid = UUID(uuidString: userID) else { return }
 
         do {
+            // First, clear existing main
+            try await SupabaseManager.shared.client
+                .from("user_photos")
+                .update(["is_main": false])
+                .eq("user_id", value: userID)
+                .execute()
+
+            // Then, upsert reordered photos
             for (index, item) in images.enumerated() {
                 guard let url = item.url else { continue }
 
                 let photo = SupabaseUserPhoto(
                     user_id: uuid,
                     url: url,
-                    is_main: index == 0
+                    is_main: index == 0 // Only first photo becomes main
                 )
 
                 try await SupabaseManager.shared.client
@@ -214,6 +235,7 @@ final class ProfileStore: ObservableObject {
             print("❌ Failed to sync reordered photos: \(error)")
         }
     }
+
 
 
     private func fetchAndCacheMainImage(from urlStr: String) async {
@@ -314,7 +336,19 @@ final class ProfileStore: ObservableObject {
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         _ = try await URLSession.shared.data(for: request)
     }
-
-
-
+    
+    func shouldReloadProfile() -> Bool {
+        guard let last = lastRefreshed else { return true }
+        return Date().timeIntervalSince(last) > 300 // 5 minutes
+    }
+    
+    func loadCachedOrFetchUserPhoto() {
+        if let cached = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+            self.userImage = cached
+        } else {
+            Task {
+                await self.refreshUserPhotoFromNetwork()
+            }
+        }
+    }
 }

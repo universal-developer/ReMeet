@@ -27,57 +27,21 @@ struct ProfileView: View {
             Color(.systemBackground).ignoresSafeArea()
 
             VStack(spacing: 20) {
-                // Header bar (compact)
-                HStack {
-                    // Left button (e.g. search or events)
-                    Button(action: {
-                        // TODO: handle search or event action
-                    }) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
+                headerBar
 
-                    Spacer()
-
-                    Text("Profile")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-
-                    Spacer()
-
-                    // Right button (notifications)
-                    Button(action: {
-                        // TODO: handle notifications
-                    }) {
-                        Image(systemName: "bell.badge")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                
                 VStack {
                     if profile.isLoading {
                         ProgressView("Loading profile...")
                     } else {
                         ScrollView {
                             VStack(alignment: .center, spacing: 20) {
-
                                 ProfilePhotoGrid(images: $profilePhotos)
                                     .environmentObject(profile)
 
                                 VStack(alignment: .leading, spacing: 12) {
-                                    if let name = profile.firstName, let age = profile.age {
-                                        Text("\(name), \(age)")
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                    } else {
-                                        Text("Your name, age")
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                    }
+                                    Text(profileNameAndAge)
+                                        .font(.title)
+                                        .fontWeight(.bold)
 
                                     TagCategorySelector(
                                         tags: personalityTags,
@@ -98,35 +62,68 @@ struct ProfileView: View {
 
                     Spacer()
                 }
-                .onAppear {
+                .task {
+                    profile.loadCachedOrFetchUserPhoto()
+
+                    if !profile.hasLoadedOnce || profile.shouldReloadProfile() {
+                        await profile.loadEverything()
+                    }
+
                     profilePhotos = profile.cachedProfileImages
                     originalPhotos = profile.cachedProfileImages
-
-                    Task {
-                        await profile.refreshUserPhotoFromNetwork()
-                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
                     if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
                         profile.userImage = refreshed
                     }
                 }
-                .onDisappear {
-                    Task.detached {
-                        await profile.syncReorderedPhotos(profilePhotos)
-                    }
-
-                }
                 .onChange(of: profilePhotos) { newPhotos in
-                    profile.cachedProfileImages = newPhotos // live update
+                    guard newPhotos != originalPhotos else { return }
+                    profile.cachedProfileImages = newPhotos
+                    originalPhotos = newPhotos
                     Task.detached {
-                        await profile.syncReorderedPhotos(newPhotos) // async background sync
+                        await profile.syncReorderedPhotos(newPhotos)
                     }
                 }
             }
         }
     }
+
+    private var headerBar: some View {
+        HStack {
+            Button(action: {}) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+
+            Spacer()
+
+            Text("Profile")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            Spacer()
+
+            Button(action: {}) {
+                Image(systemName: "bell.badge")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+    }
+
+    private var profileNameAndAge: String {
+        if let name = profile.firstName, let age = profile.age {
+            return "\(name), \(age)"
+        } else {
+            return "Your name, age"
+        }
+    }
 }
+
 
 #Preview {
     ProfileView()
