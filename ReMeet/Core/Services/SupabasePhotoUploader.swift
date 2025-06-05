@@ -13,6 +13,7 @@ struct SupabaseUserPhoto: Codable {
     let user_id: UUID
     let url: String
     var is_main: Bool
+    let sort_order: Int
 }
 
 struct PhotoUploadPayload: Encodable {
@@ -88,7 +89,8 @@ class SupabasePhotoUploader {
                 photoRecords.append(SupabaseUserPhoto(
                     user_id: userID,
                     url: result.url,
-                    is_main: imageItem.isMain
+                    is_main: imageItem.isMain,
+                    sort_order: result.index
                 ))
             }
 
@@ -120,6 +122,7 @@ class SupabasePhotoUploader {
         }
     }
 
+
     func syncPhotosIfChanged(current: [ImageItem], original: [ImageItem], userID: UUID) {
         debounceTask?.cancel()
         debounceTask = Task(priority: .background) { [originalCopy = original] in
@@ -128,4 +131,15 @@ class SupabasePhotoUploader {
             await self.uploadUpdatedPhotos(current, for: userID)
         }
     }
+    
+    func imagesHaveChanged(original: [ImageItem], current: [ImageItem]) -> Bool {
+        guard original.count == current.count else { return true }
+        for (a, b) in zip(original, current) {
+            if a != b || a.isMain != b.isMain {
+                return true
+            }
+        }
+        return false
+    }
+
 }

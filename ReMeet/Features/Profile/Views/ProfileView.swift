@@ -63,28 +63,40 @@ struct ProfileView: View {
                     Spacer()
                 }
                 .task {
-                    profile.loadCachedOrFetchUserPhoto()
-
+                    // ✅ Step 1: Load profile info + URLs first
                     if !profile.hasLoadedOnce || profile.shouldReloadProfile() {
                         await profile.loadEverything()
                     }
 
-                    profilePhotos = profile.cachedProfileImages
-                    originalPhotos = profile.cachedProfileImages
+                    // ✅ Step 2: Only after URLs are loaded, fetch images
+                    profilePhotos = await loadProfileGridPhotos(from: profile.profilePhotoURLs)
+                    originalPhotos = profilePhotos
+
+                    // ✅ Step 3: Cache userImage if still missing
+                    if profile.userImage == nil {
+                        await MainActor.run {
+                            if let main = profilePhotos.first?.image {
+                                profile.userImage = main
+                            } else {
+                                profile.loadCachedOrFetchUserPhoto()
+                            }
+                        }
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
                     if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
                         profile.userImage = refreshed
                     }
-                }
-                .onChange(of: profilePhotos) { newPhotos in
-                    guard newPhotos != originalPhotos else { return }
-                    profile.cachedProfileImages = newPhotos
-                    originalPhotos = newPhotos
-                    Task.detached {
-                        await profile.syncReorderedPhotos(newPhotos)
+                    if let image = profilePhotos.first?.image {
+                        profile.userImage = image // 💥 Force update from reordered list
                     }
                 }
+                .onChange(of: profilePhotos) {
+                    Task.detached {
+                        await profile.syncReorderedPhotos(profilePhotos)
+                    }
+                }
+
             }
         }
     }
@@ -122,6 +134,40 @@ struct ProfileView: View {
             return "Your name, age"
         }
     }
+    
+    func loadProfileGridPhotos(from urls: [String]) async -> [ImageItem] {
+        var items: [ImageItem] = []
+
+        for (index, urlStr) in urls.enumerated() {
+            guard let url = URL(string: urlStr) else { continue }
+            let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
+
+            if let ram = ImageCacheManager.shared.getFromRAM(forKey: key) {
+                items.append(ImageItem(image: ram, isMain: index == 0, url: urlStr))
+                continue
+            }
+
+            if let disk = ImageCacheManager.shared.loadFromDisk(forKey: key) {
+                ImageCacheManager.shared.setToRAM(disk, forKey: key)
+                items.append(ImageItem(image: disk, isMain: index == 0, url: urlStr))
+                continue
+            }
+
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let image = UIImage(data: data) {
+                    ImageCacheManager.shared.setToRAM(image, forKey: key)
+                    ImageCacheManager.shared.saveToDisk(image, forKey: key)
+                    items.append(ImageItem(image: image, isMain: index == 0, url: urlStr))
+                }
+            } catch {
+                print("❌ Couldn’t fetch image from \(urlStr): \(error)")
+            }
+        }
+
+        return items
+    }
+
 }
 
 
