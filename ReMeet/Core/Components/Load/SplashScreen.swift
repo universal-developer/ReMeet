@@ -9,13 +9,12 @@ import SwiftUI
 
 struct SplashScreenView: View {
     @Binding var isActive: Bool
+    let onLoadComplete: () async -> Void
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ZStack {
-            colorScheme == .dark
-            ? Color.black.ignoresSafeArea()
-            : Color.white.ignoresSafeArea()
+            (colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea()
 
             VStack {
                 Text("ReMeet")
@@ -24,8 +23,9 @@ struct SplashScreenView: View {
                     .padding(.top, 20)
             }
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        .task {
+            await onLoadComplete()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.easeOut(duration: 0.5)) {
                     isActive = false
                 }

@@ -14,6 +14,8 @@ struct ProfileView: View {
     @State private var selectedPersonality: Set<SelectableTag> = []
     @State private var profilePhotos: [ImageItem] = []
     @State private var originalPhotos: [ImageItem] = []
+    @State private var minimumSkeletonDurationPassed = false
+
 
     let personalityTags = [
         SelectableTag(label: "Introvert", iconName: "moon"),
@@ -21,6 +23,8 @@ struct ProfileView: View {
         SelectableTag(label: "Funny", iconName: "face.smiling"),
         SelectableTag(label: "Open-minded", iconName: "sparkles")
     ]
+    
+    
 
     var body: some View {
         ZStack {
@@ -36,12 +40,15 @@ struct ProfileView: View {
                         ScrollView {
                             VStack(alignment: .center, spacing: 20) {
                                 ProfilePhotoGrid(images: $profilePhotos)
-                                    .environmentObject(profile)
 
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text(profileNameAndAge)
                                         .font(.title)
                                         .fontWeight(.bold)
+                                    
+                                    Text("Photos loaded: \(profilePhotos.count)")
+                                        .font(.caption)
+
 
                                     TagCategorySelector(
                                         tags: personalityTags,
@@ -63,25 +70,43 @@ struct ProfileView: View {
                     Spacer()
                 }
                 .task {
-                    // ✅ Step 1: Load profile info + URLs first
-                    if !profile.hasLoadedOnce || profile.shouldReloadProfile() {
-                        await profile.loadEverything()
+                    // Start timer to guarantee shimmer appears
+                    Task {
+                        try? await Task.sleep(nanoseconds: 800_000_000) // 0.8 sec
+                        minimumSkeletonDurationPassed = true
                     }
 
-                    // ✅ Step 2: Only after URLs are loaded, fetch images
-                    profilePhotos = await loadProfileGridPhotos(from: profile.profilePhotoURLs)
-                    originalPhotos = profilePhotos
+                    if profilePhotos.isEmpty {
+                        // Fill with placeholders
+                        let dummy = UIImage(systemName: "photo") ?? UIImage()
+                        profilePhotos = Array(repeating: ImageItem(image: dummy, isMain: false), count: 6)
 
-                    // ✅ Step 3: Cache userImage if still missing
+
+                        // Then load real photos
+                        let cached = await profile.loadCachedGridImages()
+                        await MainActor.run {
+                            profilePhotos = cached
+                        }
+                    }
+
+                    if profile.areProfileGridPhotosLoaded {
+                        profilePhotos = profile.preloadedProfilePhotos
+                    }
+
                     if profile.userImage == nil {
                         await MainActor.run {
                             if let main = profilePhotos.first?.image {
                                 profile.userImage = main
                             } else {
-                                profile.loadCachedOrFetchUserPhoto()
+                                Task {
+                                    await profile.refreshUserPhotoFromNetwork()
+                                }
                             }
                         }
                     }
+                    
+
+
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
                     if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
@@ -96,7 +121,6 @@ struct ProfileView: View {
                         await profile.syncReorderedPhotos(profilePhotos)
                     }
                 }
-
             }
         }
     }
@@ -168,10 +192,4 @@ struct ProfileView: View {
         return items
     }
 
-}
-
-
-#Preview {
-    ProfileView()
-        .environmentObject(ProfileStore())
 }

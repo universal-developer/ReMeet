@@ -8,8 +8,6 @@
 import SwiftUI
 import PhotosUI
 
-
-
 struct ImageGrid: View {
     @Binding var images: [ImageItem]
     @State private var selectedImage: PhotosPickerItem?
@@ -65,28 +63,36 @@ struct ImageGrid: View {
     
     private func imageCell(item: ImageItem, index: Int) -> some View {
         ZStack(alignment: .topTrailing) {
-            // Image
-            Image(uiImage: item.image)
-                .resizable()
-                .scaledToFill()
-                .frame(minWidth: 0, maxWidth: .infinity, idealHeight: 110, maxHeight: 110)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .onDrag {
-                    self.draggedItem = item
-                    return NSItemProvider(object: item.id.uuidString as NSString)
-                }
-                .onDrop(of: [.text], isTargeted: nil) { providers in
-                    handleDrop(for: item)
-                }
-            
-            // Delete button
+            if let img = item.image {
+                // Show actual image
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(minWidth: 0, maxWidth: .infinity, idealHeight: 110, maxHeight: 110)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .onDrag {
+                        self.draggedItem = item
+                        return NSItemProvider(object: item.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.text], isTargeted: nil) { providers in
+                        handleDrop(for: item)
+                    }
+            } else {
+                // Show shimmer skeleton while loading
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(minWidth: 0, maxWidth: .infinity, idealHeight: 110, maxHeight: 110)
+                    .shimmering()
+            }
+
+            // Top-right delete button
             deleteButton(for: item)
-            
-            // Photo indicator (Main or number)
+
+            // Bottom-left label
             photoIndicator(item: item, index: index)
         }
         .contentShape(Rectangle())
@@ -94,6 +100,7 @@ struct ImageGrid: View {
             setAsMainPhoto(item)
         }
     }
+
     
     private var addPhotoButton: some View {
         PhotosPicker(selection: $selectedImage, matching: .images) {

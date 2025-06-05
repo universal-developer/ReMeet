@@ -10,15 +10,20 @@ import CryptoKit
 
 struct ImageItem: Identifiable, Equatable {
     let id = UUID()
-    var image: UIImage
+    var image: UIImage?
     var isMain: Bool = false
-    var url: String? = nil  // Optional to support local-only images
+    var url: String? = nil
+
+    init(image: UIImage, isMain: Bool = false, url: String? = nil) {
+        self.image = image
+        self.isMain = isMain
+        self.url = url
+    }
 
     static func == (lhs: ImageItem, rhs: ImageItem) -> Bool {
         lhs.id == rhs.id
     }
 }
-
 
 final class ImageCacheManager {
     static let shared = ImageCacheManager()

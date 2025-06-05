@@ -10,6 +10,9 @@ import SwiftUI
 
 @MainActor
 final class ProfileStore: ObservableObject {
+    @Published var preloadedProfilePhotos: [ImageItem] = []
+    @Published var areProfileGridPhotosLoaded = false
+
     struct UserProfile: Decodable {
         let first_name: String
         let age: Int
@@ -102,6 +105,22 @@ final class ProfileStore: ObservableObject {
                 self.hasLoadedOnce = true
                 self.lastRefreshed = Date()
             }
+            
+            Task.detached(priority: .utility) {
+                let imageItems = await self.loadProfileImagesGrid()
+                await MainActor.run {
+                    self.preloadedProfilePhotos = imageItems
+                    self.areProfileGridPhotosLoaded = true
+                }
+            }
+
+
+            // ✅ Load & cache images after loading URLs
+            let imageItems = await self.loadProfileImagesGrid()
+            await MainActor.run {
+                self.preloadedProfilePhotos = imageItems
+            }
+
 
 
 
@@ -317,31 +336,36 @@ final class ProfileStore: ObservableObject {
         return Date().timeIntervalSince(last) > 300
     }
 
-    func loadCachedOrFetchUserPhoto() {
-        if let cached = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
-            self.userImage = cached
-        } else {
-            Task {
-                await self.refreshUserPhotoFromNetwork()
+    @MainActor
+    func loadCachedGridImages() -> [ImageItem] {
+        var items: [ImageItem] = []
+
+        for (index, urlStr) in profilePhotoURLs.enumerated() {
+            let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
+            if let ram = ImageCacheManager.shared.getFromRAM(forKey: key) {
+                items.append(ImageItem(image: ram, isMain: index == 0, url: urlStr))
+            } else if let disk = ImageCacheManager.shared.loadFromDisk(forKey: key) {
+                ImageCacheManager.shared.setToRAM(disk, forKey: key)
+                items.append(ImageItem(image: disk, isMain: index == 0, url: urlStr))
             }
         }
+
+        return items
     }
+
     
     func loadProfileImagesGrid() async -> [ImageItem] {
         var items: [ImageItem] = []
 
-        for (index, urlStr) in self.profilePhotoURLs.enumerated() {
+        for (index, urlStr) in profilePhotoURLs.enumerated() {
             guard let url = URL(string: urlStr) else { continue }
             let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
 
-            if let ram = ImageCacheManager.shared.getFromRAM(forKey: key) {
-                items.append(ImageItem(image: ram, isMain: index == 0, url: urlStr))
-                continue
-            }
-
-            if let disk = ImageCacheManager.shared.loadFromDisk(forKey: key) {
-                ImageCacheManager.shared.setToRAM(disk, forKey: key)
-                items.append(ImageItem(image: disk, isMain: index == 0, url: urlStr))
+            if let image = ImageCacheManager.shared.getFromRAM(forKey: key)
+                ?? ImageCacheManager.shared.loadFromDisk(forKey: key)
+            {
+                ImageCacheManager.shared.setToRAM(image, forKey: key)
+                items.append(ImageItem(image: image, isMain: index == 0, url: urlStr))
                 continue
             }
 
@@ -353,7 +377,7 @@ final class ProfileStore: ObservableObject {
                     items.append(ImageItem(image: image, isMain: index == 0, url: urlStr))
                 }
             } catch {
-                print("❌ Couldn’t fetch image from \(urlStr): \(error)")
+                print("❌ Failed to fetch image at index \(index) from \(urlStr): \(error)")
             }
         }
 

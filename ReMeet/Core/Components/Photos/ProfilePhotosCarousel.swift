@@ -21,12 +21,18 @@ struct ProfilePhotosCarousel: View {
             } else {
                 TabView {
                     ForEach(images.indices, id: \.self) { index in
-                        Image(uiImage: images[index].image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()
+                        if let uiImage = images[index].image {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        } else {
+                            Color.gray.opacity(0.1) // fallback block
+                                .frame(width: geo.size.width, height: geo.size.height)
+                        }
                     }
+
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
                 .indexViewStyle(.page(backgroundDisplayMode: .interactive))

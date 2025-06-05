@@ -133,7 +133,9 @@ struct QRTabScreen: View {
             .onAppear {
                 generateMyQRCode()
 
-                profile.loadCachedOrFetchUserPhoto()
+                Task {
+                    await profile.refreshUserPhotoFromNetwork()
+                }
             }
         }
         .fullScreenCover(isPresented: $showScanner) {

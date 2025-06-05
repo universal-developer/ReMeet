@@ -66,7 +66,7 @@ struct PhotosStepView: View {
             }
         }
         .onChange(of: imageItems) { newItems in
-            model.userPhotos = newItems.map { $0.image }
+            model.userPhotos = newItems.compactMap { $0.image }
         }
     }
 }

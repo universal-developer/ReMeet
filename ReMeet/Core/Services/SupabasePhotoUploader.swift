@@ -42,11 +42,12 @@ class SupabasePhotoUploader {
                     print("📤 Preparing image #\(index) - isMain: \(imageItem.isMain)")
 
                     group.addTask {
-                        guard let data = imageItem.image.jpegData(compressionQuality: 0.4) else {
-                            print("❌ [\(index)] Failed to convert image to JPEG")
+                        guard let uiImage = imageItem.image,
+                              let data = uiImage.jpegData(compressionQuality: 0.4) else {
+                            print("❌ [\(index)] Skipped: Missing image data")
                             return nil
                         }
-
+                        
                         let fileName = "\(userID.uuidString)/photo_\(index)_\(UUID().uuidString).jpg"
                         let publicURL = "\(SupabaseManager.shared.publicStorageUrlBase)/\(self.bucket)/\(fileName)"
 
