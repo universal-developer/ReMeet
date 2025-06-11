@@ -25,7 +25,9 @@ struct QRTabScreen: View {
     @State private var myUserId: String = ""
     @State private var showScanner = false
     @State private var showFriends = false
+    @State private var didLoadOnce = false
     @State private var scannedUser: ScannedUser? = nil
+    
 
     var body: some View {
         ZStack {
@@ -140,15 +142,24 @@ struct QRTabScreen: View {
                 }
             }
             .onAppear {
-                generateMyQRCode()
+                guard !didLoadOnce else { return }
+                didLoadOnce = true
 
-                if profile.userImage == nil, let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    profile.userImage = refreshed
+                }
+
+                if profile.userImage == nil,
+                   let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
                     profile.userImage = main
                 }
-                
-                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
-                       profile.userImage = refreshed
-                   }
+
+                if let cachedQR = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main") ??
+                                  ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
+                    myQRCodeImage = cachedQR
+                } else {
+                    generateMyQRCode()
+                }
             }
         }
         .fullScreenCover(isPresented: $showScanner) {

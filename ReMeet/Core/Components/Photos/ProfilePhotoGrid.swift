@@ -1,8 +1,6 @@
-//
 //  ProfilePhotoGrid.swift
 //  ReMeet
 //  Created by Artush on 22/05/2025.
-
 
 import SwiftUI
 import PhotosUI
@@ -106,16 +104,14 @@ struct ProfilePhotoGrid: View {
                             handleDrop(toIndex: index)
                         }
 
-                    if index == 0 {
-                        Text("Main")
-                            .font(.caption2)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.black)
-                            .foregroundColor(.white)
-                            .cornerRadius(6)
-                            .padding(6)
-                    }
+                    Text(item.isMain ? "Main" : "\(index + 1)")
+                        .font(.caption2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black)
+                        .foregroundColor(.white)
+                        .cornerRadius(6)
+                        .padding(6)
                 } else {
                     Color.gray
                         .frame(width: size.width, height: size.height)
@@ -183,4 +179,12 @@ struct ProfilePhotoGrid: View {
             images[i].isMain = (i == 0)
         }
     }
+}
+
+func imagesHaveChanged(original: [ImageItem], current: [ImageItem]) -> Bool {
+    guard original.count == current.count else { return true }
+    for (a, b) in zip(original, current) {
+        if a != b || a.isMain != b.isMain { return true }
+    }
+    return false
 }

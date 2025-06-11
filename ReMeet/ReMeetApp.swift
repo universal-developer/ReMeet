@@ -50,6 +50,25 @@ struct ReMeetApp: App {
             let exists = await SupabaseManager.shared.checkUserExists(user.id)
             if exists {
                 await profileStore.loadProfileAndPhotos()
+                
+                // Cache profile image for QRTab
+                if let main = profileStore.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
+                    profileStore.userImage = main
+                    ImageCacheManager.shared.setToRAM(main, forKey: "user_photo_main")
+                    ImageCacheManager.shared.saveToDisk(main, forKey: "user_photo_main")
+                }
+
+                // Pre-generate and cache QR code
+                let fg = UIColor.black
+                let bg = UIColor.white
+                let userId = user.id.uuidString
+                let link = "https://api.remeet.app/u/\(userId)"
+                if let qr = QRCodeService.generate(from: link, foregroundColor: fg, backgroundColor: bg) {
+                    ImageCacheManager.shared.setToRAM(qr, forKey: "qr_code_main")
+                    ImageCacheManager.shared.saveToDisk(qr, forKey: "qr_code_main")
+                }
+
+                
                 await MainActor.run {
                     isLoggedIn = true
                     isSplashActive = false
