@@ -82,27 +82,26 @@ class SupabasePhotoUploader {
             // Step 2: Build DB records aligned with original input
             var photoRecords: [SupabaseUserPhoto] = []
 
-            for result in uploadResults.sorted(by: { $0.index < $1.index }) {
+            for (i, result) in uploadResults.sorted(by: { $0.index < $1.index }).enumerated() {
                 let imageItem = incomingImages[result.index]
-
-                print("📝 Preparing DB record [\(result.index)] isMain: \(imageItem.isMain) url: \(result.url)")
 
                 photoRecords.append(SupabaseUserPhoto(
                     user_id: userID,
                     url: result.url,
-                    is_main: imageItem.isMain,
-                    sort_order: result.index
+                    is_main: (i == 0),  // ✅ force first photo to be marked as main
+                    sort_order: i
                 ))
             }
 
+
             // Step 3: Guarantee exactly one main photo
-            let mainCount = photoRecords.filter(\.is_main).count
+            /*let mainCount = photoRecords.filter(\.is_main).count
             if mainCount != 1 {
                 print("⚠️ Found \(mainCount) main photos! Fixing to ensure exactly 1.")
                 for i in 0..<photoRecords.count {
                     photoRecords[i].is_main = (i == 0)
                 }
-            }
+            }*/
 
             print("📤 Final DB photo records:")
             for (i, record) in photoRecords.enumerated() {
@@ -117,6 +116,31 @@ class SupabasePhotoUploader {
                 .execute()
 
             print("✅ RPC overwrite_user_photos executed successfully")
+            
+            await MainActor.run {
+                let newItems = photoRecords.enumerated().map { i, record in
+                    ImageItem(
+                        image: incomingImages[i].image ?? UIImage(),
+                        isMain: record.is_main,
+                        url: record.url
+                    )
+                }
+
+                
+                let profile = ProfileStore.shared
+                profile.profilePhotoURLs = photoRecords.map { $0.url }
+                profile.preloadedProfilePhotos = newItems
+                //profile.areProfileGridPhotosLoaded = true
+
+                if let main = newItems.first(where: \.isMain), let uiImage = main.image {
+                    profile.userImage = uiImage
+                    ImageCacheManager.shared.setToRAM(uiImage, forKey: "user_photo_main")
+                    ImageCacheManager.shared.saveToDisk(uiImage, forKey: "user_photo_main")
+                }
+
+                NotificationCenter.default.post(name: .didUpdateMainProfilePhoto, object: nil)
+            }
+
 
         } catch {
             print("❌ Upload failed: \(error.localizedDescription)")

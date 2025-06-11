@@ -42,6 +42,19 @@ final class MapOrchestrator: ObservableObject {
 
         NotificationCenter.default.post(name: .shouldUpdateUserAnnotation, object: nil)
 
+        NotificationCenter.default.addObserver(forName: .didUpdateMainProfilePhoto, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    self.profileStore.userImage = refreshed
+                }
+
+                await self.renderCurrentUserPin()
+            }
+        }
+
+        
         Task.detached(priority: .background) {
             await self.friendManager.fetchInitialFriends()
             await MainActor.run { [weak self] in
@@ -197,7 +210,14 @@ final class MapOrchestrator: ObservableObject {
             coordinate: center
         )
 
-        let image = profileStore.userImage
+        var image = profileStore.userImage
+
+        // ✅ Always try refreshing from disk just before rendering
+        if image == nil,
+           let cachedMain = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+            image = cachedMain
+            profileStore.userImage = cachedMain
+        }
 
         if let view = MapAvatarRenderer.render(
             on: mapView,
@@ -210,6 +230,7 @@ final class MapOrchestrator: ObservableObject {
             annotationCache[pin.id] = view
         }
     }
+
 
     func renderInitialFriendPins() async {
         for (id, friend) in friendManager.friends {

@@ -54,21 +54,25 @@ struct QRTabScreen: View {
                                 .scaledToFit()
                                 .frame(width: 220, height: 220)
 
-                            if let img = profile.userImage {
-                                Image(uiImage: img)
+                            if let image = profile.userImage {
+                                Image(uiImage: image)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 64, height: 64)
+                                    .frame(width: 100, height: 100)
                                     .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .shadow(radius: 3)
+                                    .overlay(
+                                        Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                                    )
+                                    .shadow(radius: 5)
                             } else if let initials = profile.firstName?.prefix(1).uppercased() {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 64, height: 64)
-                                    .overlay(Text(initials).font(.title2).foregroundColor(.primary))
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                Text(initials)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .frame(width: 100, height: 100)
+                                    .background(Color.gray.opacity(0.3))
+                                    .clipShape(Circle())
                             }
+
                         }
                     } else {
                         ProgressView()
@@ -130,12 +134,21 @@ struct QRTabScreen: View {
                 }
                 .padding(.bottom, 32)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    profile.userImage = refreshed
+                }
+            }
             .onAppear {
                 generateMyQRCode()
 
-                Task {
-                    await profile.refreshUserPhotoFromNetwork()
+                if profile.userImage == nil, let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
+                    profile.userImage = main
                 }
+                
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                       profile.userImage = refreshed
+                   }
             }
         }
         .fullScreenCover(isPresented: $showScanner) {
