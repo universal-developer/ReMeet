@@ -13,6 +13,7 @@ struct ProfilePhotoGrid: View {
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var draggedIndex: Int? = nil
     @State private var isShowingPicker: Bool = false
+    @State private var isUploadingNewPhotos: Bool = false
 
     private let spacing: CGFloat = 8
     private let cornerRadius: CGFloat = 12
@@ -44,6 +45,18 @@ struct ProfilePhotoGrid: View {
                 }
             }
             .frame(height: UIScreen.main.bounds.width * 0.95)
+            
+            // Show upload progress indicator
+            if isUploadingNewPhotos {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Uploading photos...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 8)
+            }
         }
         .padding(.horizontal)
         .photosPicker(isPresented: $isShowingPicker,
@@ -52,33 +65,7 @@ struct ProfilePhotoGrid: View {
                       matching: .images)
         .onChange(of: selectedItems) { _ in
             Task {
-                var newItems: [ImageItem] = []
-
-                for item in selectedItems {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        if images.count + newItems.count < maxImages {
-                            newItems.append(ImageItem(image: image))
-                        }
-                    }
-                }
-
-                selectedItems = []
-
-                await MainActor.run {
-                    if images.isEmpty && !newItems.isEmpty {
-                        newItems[0].isMain = true
-                    }
-                    images.append(contentsOf: newItems)
-                    recalculateMainFlag()
-                    profile.preloadedProfilePhotos = images
-                    profile.profilePhotoURLs = images.compactMap { $0.url }
-                    profile.hasLoadedOnce = true
-                }
-
-                if let userID = try? await SupabaseManager.shared.client.auth.session.user.id {
-                    await SupabasePhotoUploader.shared.uploadUpdatedPhotos(images, for: userID)
-                }
+                await handleNewPhotoSelection()
             }
         }
     }
@@ -108,12 +95,13 @@ struct ProfilePhotoGrid: View {
                         .font(.caption2)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.black)
+                        .background(Color.black.opacity(0.7))
                         .foregroundColor(.white)
                         .cornerRadius(6)
                         .padding(6)
                 } else {
-                    Color.gray
+                    // This shouldn't happen with the new logic, but keeping as fallback
+                    Color.gray.opacity(0.3)
                         .frame(width: size.width, height: size.height)
                         .cornerRadius(cornerRadius)
                 }
@@ -142,6 +130,39 @@ struct ProfilePhotoGrid: View {
         }
     }
 
+    private func handleNewPhotoSelection() async {
+        isUploadingNewPhotos = true
+        defer { isUploadingNewPhotos = false }
+        
+        var newItems: [ImageItem] = []
+
+        for item in selectedItems {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                if images.count + newItems.count < maxImages {
+                    newItems.append(ImageItem(image: image))
+                }
+            }
+        }
+
+        selectedItems = []
+
+        await MainActor.run {
+            if images.isEmpty && !newItems.isEmpty {
+                newItems[0].isMain = true
+            }
+            images.append(contentsOf: newItems)
+            recalculateMainFlag()
+            profile.preloadedProfilePhotos = images
+            profile.profilePhotoURLs = images.compactMap { $0.url }
+        }
+
+        // Upload to server
+        if let userID = try? await SupabaseManager.shared.client.auth.session.user.id {
+            await SupabasePhotoUploader.shared.uploadUpdatedPhotos(images, for: userID)
+        }
+    }
+
     private func handleDrop(toIndex: Int) -> Bool {
         guard let fromIndex = draggedIndex,
               fromIndex != toIndex,
@@ -151,7 +172,7 @@ struct ProfilePhotoGrid: View {
             return false
         }
 
-        withAnimation {
+        withAnimation(.easeInOut(duration: 0.2)) {
             let item = images.remove(at: fromIndex)
             images.insert(item, at: toIndex)
             recalculateMainFlag()
@@ -159,6 +180,7 @@ struct ProfilePhotoGrid: View {
 
         draggedIndex = nil
 
+        // Update server in background
         Task.detached {
             guard let userID = try? await SupabaseManager.shared.client.auth.session.user.id else { return }
 
@@ -167,7 +189,6 @@ struct ProfilePhotoGrid: View {
             await MainActor.run {
                 profile.preloadedProfilePhotos = images
                 profile.profilePhotoURLs = images.compactMap { $0.url }
-                profile.hasLoadedOnce = true
             }
         }
 

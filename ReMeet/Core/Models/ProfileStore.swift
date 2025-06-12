@@ -22,10 +22,18 @@ final class ProfileStore: ObservableObject {
     @Published var userImage: UIImage?
     @Published var profilePhotoURLs: [String] = []
     @Published var hasLoadedOnce: Bool = false
+    @Published var isLoading: Bool = false
 
+    private init() {}
 
     // MARK: - Load all user data
     func loadProfileAndPhotos() async {
+        // Prevent multiple simultaneous loads
+        guard !isLoading else { return }
+        
+        isLoading = true
+        defer { isLoading = false }
+        
         do {
             let session = try await SupabaseManager.shared.client.auth.session
             let userId = session.user.id.uuidString
@@ -57,22 +65,48 @@ final class ProfileStore: ObservableObject {
 
             var images: [ImageItem] = []
 
-            for (index, photo) in allPhotos.enumerated() {
-                let urlStr = photo.url
-                let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
+            // Load images concurrently for better performance
+            await withTaskGroup(of: (Int, ImageItem?).self) { group in
+                for (index, photo) in allPhotos.enumerated() {
+                    group.addTask {
+                        let urlStr = photo.url
+                        let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
 
-                if let cached = ImageCacheManager.shared.getFromRAM(forKey: key) ??
-                                ImageCacheManager.shared.loadFromDisk(forKey: key) {
-                    ImageCacheManager.shared.setToRAM(cached, forKey: key)
-                    images.append(ImageItem(image: cached, isMain: photo.is_main, url: urlStr))
-                } else if let url = URL(string: urlStr) {
-                    let (data, _) = try await URLSession.shared.data(from: url)
-                    if let image = UIImage(data: data) {
-                        ImageCacheManager.shared.setToRAM(image, forKey: key)
-                        ImageCacheManager.shared.saveToDisk(image, forKey: key)
-                        images.append(ImageItem(image: image, isMain: photo.is_main, url: urlStr))
+                        // Check cache first
+                        if let cached = ImageCacheManager.shared.getFromRAM(forKey: key) ??
+                                        ImageCacheManager.shared.loadFromDisk(forKey: key) {
+                            ImageCacheManager.shared.setToRAM(cached, forKey: key)
+                            return (index, ImageItem(image: cached, isMain: photo.is_main, url: urlStr))
+                        }
+                        
+                        // Load from network
+                        guard let url = URL(string: urlStr) else { return (index, nil) }
+                        
+                        do {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            if let image = UIImage(data: data) {
+                                ImageCacheManager.shared.setToRAM(image, forKey: key)
+                                ImageCacheManager.shared.saveToDisk(image, forKey: key)
+                                return (index, ImageItem(image: image, isMain: photo.is_main, url: urlStr))
+                            }
+                        } catch {
+                            print("❌ Failed to load image at \(urlStr): \(error)")
+                        }
+                        
+                        return (index, nil)
                     }
                 }
+                
+                // Collect results in order
+                var indexedImages: [(Int, ImageItem)] = []
+                for await result in group {
+                    if let imageItem = result.1 {
+                        indexedImages.append((result.0, imageItem))
+                    }
+                }
+                
+                // Sort by original index and extract images
+                images = indexedImages.sorted { $0.0 < $1.0 }.map { $0.1 }
             }
 
             self.preloadedProfilePhotos = images
@@ -87,6 +121,45 @@ final class ProfileStore: ObservableObject {
 
         } catch {
             print("❌ Failed to load profile + photos: \(error)")
+        }
+    }
+
+    // MARK: - Refresh photos only (for when user updates photos)
+    func refreshPhotos() async {
+        guard let userId = self.userId else { return }
+        
+        do {
+            let allPhotos: [UserPhoto] = try await SupabaseManager.shared.client
+                .from("user_photos")
+                .select("url, is_main")
+                .eq("user_id", value: userId)
+                .order("sort_order", ascending: true)
+                .execute()
+                .value
+
+            var images: [ImageItem] = []
+            
+            for photo in allPhotos {
+                let urlStr = photo.url
+                let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
+
+                if let cached = ImageCacheManager.shared.getFromRAM(forKey: key) ??
+                                ImageCacheManager.shared.loadFromDisk(forKey: key) {
+                    images.append(ImageItem(image: cached, isMain: photo.is_main, url: urlStr))
+                }
+            }
+            
+            self.preloadedProfilePhotos = images
+            self.profilePhotoURLs = allPhotos.map { $0.url }
+            
+            if let main = images.first(where: { $0.isMain })?.image {
+                self.userImage = main
+                ImageCacheManager.shared.setToRAM(main, forKey: "user_photo_main")
+                ImageCacheManager.shared.saveToDisk(main, forKey: "user_photo_main")
+            }
+            
+        } catch {
+            print("❌ Failed to refresh photos: \(error)")
         }
     }
 

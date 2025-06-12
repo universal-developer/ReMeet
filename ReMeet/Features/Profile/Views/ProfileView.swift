@@ -12,8 +12,7 @@ import Foundation
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var selectedPersonality: Set<SelectableTag> = []
-    @State private var profilePhotos: [ImageItem] = []
-    @State private var hasInitializedPhotos = false
+    @State private var isLoading = false // Only true when actually loading from network
 
     let personalityTags = [
         SelectableTag(label: "Introvert", iconName: "moon"),
@@ -31,12 +30,11 @@ struct ProfileView: View {
 
                 ScrollView {
                     VStack(alignment: .center, spacing: 20) {
-                        if !profile.hasLoadedOnce {
-                            ProfilePhotoGrid(images: $profilePhotos)
-                                .redacted(reason: .placeholder)
-                                .shimmering()
+                        // Show shimmer only when actually loading from network
+                        if isLoading {
+                            shimmerPhotoGrid
                         } else {
-                            ProfilePhotoGrid(images: $profilePhotos)
+                            ProfilePhotoGrid(images: $profile.preloadedProfilePhotos)
                         }
 
                         VStack(alignment: .leading, spacing: 12) {
@@ -44,7 +42,7 @@ struct ProfileView: View {
                                 .font(.title)
                                 .fontWeight(.bold)
 
-                            Text("Photos loaded: \(profilePhotos.count)")
+                            Text("Photos loaded: \(profile.preloadedProfilePhotos.count)")
                                 .font(.caption)
 
                             TagCategorySelector(
@@ -65,14 +63,21 @@ struct ProfileView: View {
 
                 Spacer()
             }
-            .task {
-                if !hasInitializedPhotos {
-                    profilePhotos = profile.preloadedProfilePhotos
-                    hasInitializedPhotos = true
+            .onAppear {
+                // Only load if we haven't loaded before or if we have no photos
+                if !profile.hasLoadedOnce || profile.preloadedProfilePhotos.isEmpty {
+                    isLoading = true
+                    Task {
+                        await profile.loadProfileAndPhotos()
+                        await MainActor.run {
+                            isLoading = false
+                        }
+                    }
                 }
-
+                
+                // Set user image if not already set
                 if profile.userImage == nil,
-                   let main = profilePhotos.first(where: { $0.isMain })?.image {
+                   let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
                     profile.userImage = main
                 }
             }
@@ -80,11 +85,57 @@ struct ProfileView: View {
                 if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
                     profile.userImage = refreshed
                 }
-                if let image = profilePhotos.first(where: \.isMain)?.image {
+                if let image = profile.preloadedProfilePhotos.first(where: \.isMain)?.image {
                     profile.userImage = image
                 }
             }
         }
+    }
+    
+    private var shimmerPhotoGrid: some View {
+        VStack {
+            GeometryReader { geo in
+                let width = geo.size.width
+                let spacing: CGFloat = 8
+                let full = width - spacing * 2
+                let smallSize = (full - spacing * 2) / 3
+                let largeHeight = smallSize * 2 + spacing
+
+                VStack(spacing: spacing) {
+                    HStack(spacing: spacing) {
+                        // Large placeholder
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: smallSize * 2 + spacing, height: largeHeight)
+                            .shimmering()
+
+                        VStack(spacing: spacing) {
+                            // Small placeholders
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                            
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                        }
+                    }
+
+                    HStack(spacing: spacing) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                        }
+                    }
+                }
+            }
+            .frame(height: UIScreen.main.bounds.width * 0.95)
+        }
+        .padding(.horizontal)
     }
 
     private var headerBar: some View {
