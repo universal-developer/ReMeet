@@ -60,17 +60,15 @@ struct QRTabScreen: View {
                                 Image(uiImage: image)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 64, height: 64)
                                     .clipShape(Circle())
-                                    .overlay(
-                                        Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1)
-                                    )
-                                    .shadow(radius: 5)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .shadow(radius: 3)
                             } else if let initials = profile.firstName?.prefix(1).uppercased() {
                                 Text(initials)
                                     .font(.largeTitle)
                                     .fontWeight(.bold)
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 64, height: 64)
                                     .background(Color.gray.opacity(0.3))
                                     .clipShape(Circle())
                             }
@@ -106,33 +104,8 @@ struct QRTabScreen: View {
                 Spacer()
 
                 HStack(spacing: 32) {
-                    VStack(spacing: 8) {
-                        Button(action: { showScanner = true }) {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 60)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        Text("Scan QR")
-                            .font(.footnote)
-                            .foregroundColor(.primary)
-                    }
-
-                    VStack(spacing: 8) {
-                        Button(action: { showFriends = true }) {
-                            Image(systemName: "person.2.fill")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 60)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        Text("Friends")
-                            .font(.footnote)
-                            .foregroundColor(.primary)
-                    }
+                    SquareButton(text: "Scan QR", icon: "camera.viewfinder", action: { showScanner = true })
+                    SquareButton(text: "Friends", icon: "person.2.fill", action: { showFriends = true })
                 }
                 .padding(.bottom, 32)
             }
@@ -182,12 +155,12 @@ struct QRTabScreen: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 80, height: 80)
+                                .frame(width: 36, height: 36)
                                 .clipShape(Circle())
                         } else {
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
-                                .frame(width: 80, height: 80)
+                                .frame(width: 36, height: 36)
                                 .overlay(Text(user.firstName.prefix(1)))
                         }
 
