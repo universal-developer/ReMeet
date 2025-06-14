@@ -140,24 +140,21 @@ struct ProfileView: View {
 
     private var headerBar: some View {
         HStack {
-            Button(action: {}) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
-
-            Spacer()
-
             Text("Profile")
-                .font(.headline)
+                .font(.largeTitle)
                 .fontWeight(.semibold)
 
             Spacer()
 
-            Button(action: {}) {
-                Image(systemName: "bell.badge")
-                    .font(.system(size: 20, weight: .semibold))
+            Button(action: {
+                // TODO: Open profile editing view
+            }) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
             }
         }
         .padding(.horizontal, 16)
@@ -171,4 +168,22 @@ struct ProfileView: View {
             return "Your name, age"
         }
     }
+}
+
+#Preview {
+    let store = ProfileStore.shared
+
+    // Mock basic profile data
+    store.firstName = "Artush"
+    store.age = 18
+    store.preloadedProfilePhotos = [
+        ImageItem(image: UIImage(systemName: "person.fill")!, isMain: true),
+        ImageItem(image: UIImage(systemName: "person.fill")!),
+        ImageItem(image: UIImage(systemName: "person.fill")!)
+    ]
+    store.userImage = store.preloadedProfilePhotos.first?.image
+    store.hasLoadedOnce = true
+
+    return ProfileView()
+        .environmentObject(store)
 }

@@ -18,7 +18,7 @@ struct MainAppView: View {
             ZStack {
                 switch selectedTab {
                 case .home:
-                    HomeMapScreen(orchestrator: orchestrator)
+                    MapScreenView(orchestrator: orchestrator)
                 case .explore:
                     ExploreView()
                 case .qr:

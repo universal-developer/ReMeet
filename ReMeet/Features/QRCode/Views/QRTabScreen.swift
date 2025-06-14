@@ -36,14 +36,14 @@ struct QRTabScreen: View {
             VStack(spacing: 20) {
                 VStack(spacing: 4) {
                     Text("My Code")
-                        .font(.title3)
+                        .font(.title2)
                         .fontWeight(.semibold)
+
                     Text("Others can scan this to add you")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                .padding(.top, 32)
-                .padding(.horizontal)
+                .padding(.top, 24)
 
                 Spacer()
 

@@ -9,7 +9,7 @@
 import SwiftUI
 import MapboxMaps
 
-struct HomeMapScreen: View {
+struct MapScreenView: View {
     @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
     @AppStorage("isGhostMode") private var isGhostMode = false // persists across sessions
         
