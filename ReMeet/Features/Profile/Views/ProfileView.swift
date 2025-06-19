@@ -11,16 +11,11 @@ import Foundation
 
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
-    @State private var selectedPersonality: Set<SelectableTag> = []
     @State private var isLoading = false // Only true when actually loading from network
-
-    let personalityTags = [
-        SelectableTag(label: "Introvert", iconName: "moon"),
-        SelectableTag(label: "Extrovert", iconName: "sun.max"),
-        SelectableTag(label: "Funny", iconName: "face.smiling"),
-        SelectableTag(label: "Open-minded", iconName: "sparkles")
-    ]
-
+    @State private var isShowingEditSheet = false
+    @State private var highlightEditButton = false
+    
+    
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
@@ -41,21 +36,19 @@ struct ProfileView: View {
                             Text(profileNameAndAge)
                                 .font(.title)
                                 .fontWeight(.bold)
-
-                            Text("Photos loaded: \(profile.preloadedProfilePhotos.count)")
-                                .font(.caption)
-
-                            TagCategorySelector(
-                                tags: personalityTags,
-                                selectionLimit: 3,
-                                selected: $selectedPersonality
-                            )
-
-                            Button("Edit Profile Info") {
-                                // Hook to edit sheet
+                            
+                            /*Text("Photos loaded: \(profile.preloadedProfilePhotos.count)")
+                             .font(.caption)*/
+                            if let city = profile.city, !city.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                    Text(city)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                            .padding(.top)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     }
                     .padding(.top)
@@ -80,6 +73,12 @@ struct ProfileView: View {
                    let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
                     profile.userImage = main
                 }
+                
+                if profile.city == nil || profile.city?.isEmpty == true {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        highlightEditButton = true
+                    }
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
                 if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
@@ -89,8 +88,12 @@ struct ProfileView: View {
                     profile.userImage = image
                 }
             }
+            .sheet(isPresented: $isShowingEditSheet) {
+                editProfileSheet
+            }
         }
     }
+    
     
     private var shimmerPhotoGrid: some View {
         VStack {
@@ -146,7 +149,7 @@ struct ProfileView: View {
 
             Spacer()
 
-            Button(action: {
+            /*Button(action: {
                 // TODO: Open profile editing view
             }) {
                 Image(systemName: "pencil")
@@ -155,7 +158,27 @@ struct ProfileView: View {
                     .padding(10)
                     .background(.ultraThinMaterial)
                     .clipShape(Circle())
+            }*/
+            
+            Button(action: {
+                isShowingEditSheet = true
+                highlightEditButton = false
+            }) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color(hex: "C9155A"), lineWidth: highlightEditButton ? 2 : 0)
+                            .scaleEffect(highlightEditButton ? 1.2 : 1.0)
+                            .opacity(highlightEditButton ? 1.0 : 0)
+                            .animation(.easeInOut(duration: 1.2).repeatCount(3, autoreverses: true), value: highlightEditButton)
+                    )
             }
+
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -168,6 +191,50 @@ struct ProfileView: View {
             return "Your name, age"
         }
     }
+    
+    private var editProfileSheet: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Photos")) {
+                    EditablePhotoGrid(images: $profile.preloadedProfilePhotos)
+                }
+
+                Section(header: Text("Name")) {
+                    TextField("Your name", text: Binding(
+                        get: { profile.firstName ?? "" },
+                        set: { profile.firstName = $0 }
+                    ))
+                }
+
+                Section(header: Text("Age")) {
+                    TextField("Your age", value: Binding(
+                        get: { profile.age ?? 18 },
+                        set: { profile.age = max(18, $0) } // 👈 forces >= 18
+                    ), format: .number)
+                    .keyboardType(.numberPad)
+                }
+
+                Section(header: Text("City")) {
+                    TextField(profile.city?.isEmpty == false ? "" : "Add your city", text: Binding(
+                        get: { profile.city ?? "" },
+                        set: { profile.city = $0 }
+                    ))
+                    .autocapitalization(.words)
+                    .disableAutocorrection(true)
+                }
+            }
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isShowingEditSheet = false
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 #Preview {

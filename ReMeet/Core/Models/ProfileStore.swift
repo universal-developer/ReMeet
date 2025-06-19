@@ -16,6 +16,7 @@ final class ProfileStore: ObservableObject {
     @Published var userId: String?
     @Published var firstName: String?
     @Published var age: Int?
+    @Published var city: String? = nil
 
     // MARK: - Photos
     @Published var preloadedProfilePhotos: [ImageItem] = []
