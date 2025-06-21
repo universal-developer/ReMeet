@@ -9,7 +9,7 @@
 import SwiftUI
 import MapboxMaps
 
-struct HomeMapScreen: View {
+struct MapScreenView: View {
     @AppStorage("hasLoadedMapOnce") private var hasLoadedMapOnce: Bool = false
     @AppStorage("isGhostMode") private var isGhostMode = false // persists across sessions
         
@@ -64,6 +64,11 @@ struct HomeMapScreen: View {
                     .onTapGesture {
                         withAnimation { showModal = false }
                     }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+            if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                profile.userImage = refreshed
             }
         }
         .sheet(isPresented: $showVisibilitySheet) {
@@ -124,10 +129,17 @@ struct HomeMapScreen: View {
         VStack {
             HStack(spacing: 12) {
                 Button(action: { print("👤 Avatar tapped") }) {
-                    Image("profilePlaceholder")
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
+                    if let avatar = profile.userImage {
+                        Image(uiImage: avatar)
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 36, height: 36)
+                    }
+
                 }
                 Spacer()
                 Button(action: { print("🔍 Search tapped") }) {

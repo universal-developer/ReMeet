@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct SplashScreenView: View {
-    @Binding var isActive: Bool
     let onLoadComplete: () async -> Void
+    @Binding var isActive: Bool
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {

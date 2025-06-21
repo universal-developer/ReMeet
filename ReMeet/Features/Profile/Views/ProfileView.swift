@@ -11,21 +11,11 @@ import Foundation
 
 struct ProfileView: View {
     @EnvironmentObject var profile: ProfileStore
-    @State private var selectedPersonality: Set<SelectableTag> = []
-    @State private var profilePhotos: [ImageItem] = []
-    @State private var originalPhotos: [ImageItem] = []
-    @State private var minimumSkeletonDurationPassed = false
-
-
-    let personalityTags = [
-        SelectableTag(label: "Introvert", iconName: "moon"),
-        SelectableTag(label: "Extrovert", iconName: "sun.max"),
-        SelectableTag(label: "Funny", iconName: "face.smiling"),
-        SelectableTag(label: "Open-minded", iconName: "sparkles")
-    ]
+    @State private var isLoading = false // Only true when actually loading from network
+    @State private var isShowingEditSheet = false
+    @State private var highlightEditButton = false
     
     
-
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
@@ -33,119 +23,163 @@ struct ProfileView: View {
             VStack(spacing: 20) {
                 headerBar
 
-                VStack {
-                    if profile.isLoading {
-                        ProgressView("Loading profile...")
-                    } else {
-                        ScrollView {
-                            VStack(alignment: .center, spacing: 20) {
-                                ProfilePhotoGrid(images: $profilePhotos)
-
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text(profileNameAndAge)
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                    
-                                    Text("Photos loaded: \(profilePhotos.count)")
-                                        .font(.caption)
-
-
-                                    TagCategorySelector(
-                                        tags: personalityTags,
-                                        selectionLimit: 3,
-                                        selected: $selectedPersonality
-                                    )
-
-                                    Button("Edit Profile Info") {
-                                        // Hook to edit sheet
-                                    }
-                                    .padding(.top)
-                                }
-                                .padding(.horizontal)
-                            }
-                            .padding(.top)
+                ScrollView {
+                    VStack(alignment: .center, spacing: 20) {
+                        // Show shimmer only when actually loading from network
+                        if isLoading {
+                            shimmerPhotoGrid
+                        } else {
+                            ProfilePhotoGrid(images: $profile.preloadedProfilePhotos, showDeleteButtons: false)
                         }
-                    }
 
-                    Spacer()
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(profileNameAndAge)
+                                .font(.title)
+                                .fontWeight(.bold)
+                            
+                            /*Text("Photos loaded: \(profile.preloadedProfilePhotos.count)")
+                             .font(.caption)*/
+                            if let city = profile.city, !city.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                    Text(city)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                    }
+                    .padding(.top)
                 }
-                .task {
-                    // Start timer to guarantee shimmer appears
+
+                Spacer()
+            }
+            .onAppear {
+                // Only load if we haven't loaded before or if we have no photos
+                if !profile.hasLoadedOnce || profile.preloadedProfilePhotos.isEmpty {
+                    isLoading = true
                     Task {
-                        try? await Task.sleep(nanoseconds: 800_000_000) // 0.8 sec
-                        minimumSkeletonDurationPassed = true
-                    }
-
-                    if profilePhotos.isEmpty {
-                        // Fill with placeholders
-                        let dummy = UIImage(systemName: "photo") ?? UIImage()
-                        profilePhotos = Array(repeating: ImageItem(image: dummy, isMain: false), count: 6)
-
-
-                        // Then load real photos
-                        let cached = await profile.loadCachedGridImages()
+                        await profile.loadProfileAndPhotos()
                         await MainActor.run {
-                            profilePhotos = cached
+                            isLoading = false
                         }
                     }
-
-                    if profile.areProfileGridPhotosLoaded {
-                        profilePhotos = profile.preloadedProfilePhotos
-                    }
-
-                    if profile.userImage == nil {
-                        await MainActor.run {
-                            if let main = profilePhotos.first?.image {
-                                profile.userImage = main
-                            } else {
-                                Task {
-                                    await profile.refreshUserPhotoFromNetwork()
-                                }
-                            }
-                        }
-                    }
-                    
-
-
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
-                    if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
-                        profile.userImage = refreshed
-                    }
-                    if let image = profilePhotos.first?.image {
-                        profile.userImage = image // 💥 Force update from reordered list
-                    }
+                
+                // Set user image if not already set
+                if profile.userImage == nil,
+                   let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
+                    profile.userImage = main
                 }
-                .onChange(of: profilePhotos) {
-                    Task.detached {
-                        await profile.syncReorderedPhotos(profilePhotos)
+                
+                if profile.city == nil || profile.city?.isEmpty == true {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        highlightEditButton = true
                     }
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    profile.userImage = refreshed
+                }
+                if let image = profile.preloadedProfilePhotos.first(where: \.isMain)?.image {
+                    profile.userImage = image
+                }
+            }
+            .sheet(isPresented: $isShowingEditSheet) {
+                EditProfileView(images: $profile.preloadedProfilePhotos)
+                    .environmentObject(profile)
+            }
         }
+    }
+    
+    
+    private var shimmerPhotoGrid: some View {
+        VStack {
+            GeometryReader { geo in
+                let width = geo.size.width
+                let spacing: CGFloat = 8
+                let full = width - spacing * 2
+                let smallSize = (full - spacing * 2) / 3
+                let largeHeight = smallSize * 2 + spacing
+
+                VStack(spacing: spacing) {
+                    HStack(spacing: spacing) {
+                        // Large placeholder
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: smallSize * 2 + spacing, height: largeHeight)
+                            .shimmering()
+
+                        VStack(spacing: spacing) {
+                            // Small placeholders
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                            
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                        }
+                    }
+
+                    HStack(spacing: spacing) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: smallSize, height: smallSize)
+                                .shimmering()
+                        }
+                    }
+                }
+            }
+            .frame(height: UIScreen.main.bounds.width * 0.95)
+        }
+        .padding(.horizontal)
     }
 
     private var headerBar: some View {
         HStack {
-            Button(action: {}) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
-
-            Spacer()
-
             Text("Profile")
-                .font(.headline)
+                .font(.largeTitle)
                 .fontWeight(.semibold)
 
             Spacer()
 
-            Button(action: {}) {
-                Image(systemName: "bell.badge")
-                    .font(.system(size: 20, weight: .semibold))
+            /*Button(action: {
+                // TODO: Open profile editing view
+            }) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+            }*/
+            
+            Button(action: {
+                isShowingEditSheet = true
+                highlightEditButton = false
+            }) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color(hex: "C9155A"), lineWidth: highlightEditButton ? 2 : 0)
+                            .scaleEffect(highlightEditButton ? 1.2 : 1.0)
+                            .opacity(highlightEditButton ? 1.0 : 0)
+                            .animation(.easeInOut(duration: 1.2).repeatCount(3, autoreverses: true), value: highlightEditButton)
+                    )
             }
+
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -159,37 +193,65 @@ struct ProfileView: View {
         }
     }
     
-    func loadProfileGridPhotos(from urls: [String]) async -> [ImageItem] {
-        var items: [ImageItem] = []
-
-        for (index, urlStr) in urls.enumerated() {
-            guard let url = URL(string: urlStr) else { continue }
-            let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: urlStr))"
-
-            if let ram = ImageCacheManager.shared.getFromRAM(forKey: key) {
-                items.append(ImageItem(image: ram, isMain: index == 0, url: urlStr))
-                continue
-            }
-
-            if let disk = ImageCacheManager.shared.loadFromDisk(forKey: key) {
-                ImageCacheManager.shared.setToRAM(disk, forKey: key)
-                items.append(ImageItem(image: disk, isMain: index == 0, url: urlStr))
-                continue
-            }
-
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let image = UIImage(data: data) {
-                    ImageCacheManager.shared.setToRAM(image, forKey: key)
-                    ImageCacheManager.shared.saveToDisk(image, forKey: key)
-                    items.append(ImageItem(image: image, isMain: index == 0, url: urlStr))
+    /*private var editProfileSheet: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Photos")) {
+                    ProfilePhotoGrid(images: $profile.preloadedProfilePhotos, showDeleteButtons: true)
                 }
-            } catch {
-                print("❌ Couldn’t fetch image from \(urlStr): \(error)")
+
+                Section(header: Text("Name")) {
+                    TextField("Your name", text: Binding(
+                        get: { profile.firstName ?? "" },
+                        set: { profile.firstName = $0 }
+                    ))
+                }
+
+                Section(header: Text("Age")) {
+                    TextField("Your age", value: Binding(
+                        get: { profile.age ?? 18 },
+                        set: { profile.age = max(18, $0) } // 👈 forces >= 18
+                    ), format: .number)
+                    .keyboardType(.numberPad)
+                }
+
+                Section(header: Text("City")) {
+                    TextField(profile.city?.isEmpty == false ? "" : "Add your city", text: Binding(
+                        get: { profile.city ?? "" },
+                        set: { profile.city = $0 }
+                    ))
+                    .autocapitalization(.words)
+                    .disableAutocorrection(true)
+                }
+            }
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isShowingEditSheet = false
+                    }
+                }
             }
         }
+    }*/
 
-        return items
-    }
+}
 
+#Preview {
+    let store = ProfileStore.shared
+
+    // Mock basic profile data
+    store.firstName = "Artush"
+    store.age = 18
+    store.preloadedProfilePhotos = [
+        ImageItem(image: UIImage(systemName: "person.fill")!, isMain: true),
+        ImageItem(image: UIImage(systemName: "person.fill")!),
+        ImageItem(image: UIImage(systemName: "person.fill")!)
+    ]
+    store.userImage = store.preloadedProfilePhotos.first?.image
+    store.hasLoadedOnce = true
+
+    return ProfileView()
+        .environmentObject(store)
 }

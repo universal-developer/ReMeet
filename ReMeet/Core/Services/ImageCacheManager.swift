@@ -94,5 +94,20 @@ final class ImageCacheManager {
         let hash = SHA256.hash(data: data)
         return hash.map { String(format: "%02x", $0) }.joined()
     }
-
+    
+    func clearAllCachedPhotos() {
+        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+        do {
+            let files = try fileManager.contentsOfDirectory(atPath: cacheDir.path)
+            for file in files where file.hasPrefix("user_photo_") || file.hasPrefix("qr_code_") {
+                try fileManager.removeItem(at: cacheDir.appendingPathComponent(file))
+            }
+        } catch {
+            print("❌ Failed to clear photo cache: \(error)")
+        }
+    }
+    
+    func removeFromRAM(forKey key: String) {
+        ramCache.removeObject(forKey: key as NSString)
+    }
 }

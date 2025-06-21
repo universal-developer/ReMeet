@@ -25,7 +25,9 @@ struct QRTabScreen: View {
     @State private var myUserId: String = ""
     @State private var showScanner = false
     @State private var showFriends = false
+    @State private var didLoadOnce = false
     @State private var scannedUser: ScannedUser? = nil
+    
 
     var body: some View {
         ZStack {
@@ -34,14 +36,14 @@ struct QRTabScreen: View {
             VStack(spacing: 20) {
                 VStack(spacing: 4) {
                     Text("My Code")
-                        .font(.title3)
+                        .font(.title2)
                         .fontWeight(.semibold)
+
                     Text("Others can scan this to add you")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                .padding(.top, 32)
-                .padding(.horizontal)
+                .padding(.top, 24)
 
                 Spacer()
 
@@ -54,8 +56,8 @@ struct QRTabScreen: View {
                                 .scaledToFit()
                                 .frame(width: 220, height: 220)
 
-                            if let img = profile.userImage {
-                                Image(uiImage: img)
+                            if let image = profile.userImage {
+                                Image(uiImage: image)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 64, height: 64)
@@ -63,12 +65,14 @@ struct QRTabScreen: View {
                                     .overlay(Circle().stroke(Color.white, lineWidth: 2))
                                     .shadow(radius: 3)
                             } else if let initials = profile.firstName?.prefix(1).uppercased() {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
+                                Text(initials)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
                                     .frame(width: 64, height: 64)
-                                    .overlay(Text(initials).font(.title2).foregroundColor(.primary))
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .background(Color.gray.opacity(0.3))
+                                    .clipShape(Circle())
                             }
+
                         }
                     } else {
                         ProgressView()
@@ -100,41 +104,34 @@ struct QRTabScreen: View {
                 Spacer()
 
                 HStack(spacing: 32) {
-                    VStack(spacing: 8) {
-                        Button(action: { showScanner = true }) {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 60)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        Text("Scan QR")
-                            .font(.footnote)
-                            .foregroundColor(.primary)
-                    }
-
-                    VStack(spacing: 8) {
-                        Button(action: { showFriends = true }) {
-                            Image(systemName: "person.2.fill")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 60)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        Text("Friends")
-                            .font(.footnote)
-                            .foregroundColor(.primary)
-                    }
+                    SquareButton(text: "Scan QR", icon: "camera.viewfinder", action: { showScanner = true })
+                    SquareButton(text: "Friends", icon: "person.2.fill", action: { showFriends = true })
                 }
                 .padding(.bottom, 32)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .didUpdateMainProfilePhoto)) { _ in
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    profile.userImage = refreshed
+                }
+            }
             .onAppear {
-                generateMyQRCode()
+                guard !didLoadOnce else { return }
+                didLoadOnce = true
 
-                Task {
-                    await profile.refreshUserPhotoFromNetwork()
+                if let refreshed = ImageCacheManager.shared.loadFromDisk(forKey: "user_photo_main") {
+                    profile.userImage = refreshed
+                }
+
+                if profile.userImage == nil,
+                   let main = profile.preloadedProfilePhotos.first(where: { $0.isMain })?.image {
+                    profile.userImage = main
+                }
+
+                if let cachedQR = ImageCacheManager.shared.getFromRAM(forKey: "qr_code_main") ??
+                                  ImageCacheManager.shared.loadFromDisk(forKey: "qr_code_main") {
+                    myQRCodeImage = cachedQR
+                } else {
+                    generateMyQRCode()
                 }
             }
         }
@@ -158,12 +155,12 @@ struct QRTabScreen: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 80, height: 80)
+                                .frame(width: 36, height: 36)
                                 .clipShape(Circle())
                         } else {
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
-                                .frame(width: 80, height: 80)
+                                .frame(width: 36, height: 36)
                                 .overlay(Text(user.firstName.prefix(1)))
                         }
 
