@@ -1,5 +1,6 @@
 //  ProfilePhotoGrid.swift
 //  ReMeet
+//
 //  Created by Artush on 22/05/2025.
 
 import SwiftUI
@@ -9,6 +10,8 @@ struct ProfilePhotoGrid: View {
     @Binding var images: [ImageItem]
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var profile: ProfileStore
+
+    var showDeleteButtons: Bool = false
 
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var draggedIndex: Int? = nil
@@ -38,15 +41,14 @@ struct ProfilePhotoGrid: View {
                     }
 
                     HStack(spacing: spacing) {
-                        gridSlot(index: 3, size: CGSize(width: smallSize, height: smallSize))
-                        gridSlot(index: 4, size: CGSize(width: smallSize, height: smallSize))
-                        gridSlot(index: 5, size: CGSize(width: smallSize, height: smallSize))
+                        ForEach(3..<6, id: \.self) { index in
+                            gridSlot(index: index, size: CGSize(width: smallSize, height: smallSize))
+                        }
                     }
                 }
             }
             .frame(height: UIScreen.main.bounds.width * 0.95)
-            
-            // Show upload progress indicator
+
             if isUploadingNewPhotos {
                 HStack {
                     ProgressView()
@@ -75,7 +77,7 @@ struct ProfilePhotoGrid: View {
         if index < images.count {
             let item = images[index]
 
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .topTrailing) {
                 if let uiImage = item.image {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -99,8 +101,59 @@ struct ProfilePhotoGrid: View {
                         .foregroundColor(.white)
                         .cornerRadius(6)
                         .padding(6)
+                        .offset(y: size.height - 28)
+                    
+                    if showDeleteButtons {
+                        Button(action: {
+                            if index < images.count {
+                                let removed = images.remove(at: index)
+                                recalculateMainFlag()
+                                
+                                withAnimation {
+                                    profile.preloadedProfilePhotos = images
+                                    profile.profilePhotoURLs = images.compactMap { $0.url }
+                                }
+
+                                // Optional: remove from RAM/disk if needed
+                                if let url = removed.url {
+                                    let key = "user_photo_\(ImageCacheManager.shared.stableHash(for: url))"
+                                    ImageCacheManager.shared.removeFromRAM(forKey: key)
+                                    ImageCacheManager.shared.removeFromDisk(forKey: key)
+
+                                    // ✅ DELETE FROM Supabase
+                                    Task {
+                                        do {
+                                            try await SupabaseManager.shared.client
+                                                .from("user_photos")
+                                                .delete()
+                                                .eq("user_id", value: profile.userId ?? "")
+                                                .eq("url", value: url)
+                                                .execute()
+                                            print("🧹 Deleted photo from Supabase.")
+                                        } catch {
+                                            print("❌ Failed to delete from Supabase: \(error)")
+                                        }
+                                    }
+                                }
+
+                                // Re-upload remaining images with updated order + is_main
+                                Task {
+                                    if let userID = try? await SupabaseManager.shared.client.auth.session.user.id {
+                                        await SupabasePhotoUploader.shared.uploadUpdatedPhotos(images, for: userID)
+                                    }
+                                }
+                            }
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.red)
+                                .background(Color.white.opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .offset(x: 6, y: -6)
+                    }
+
                 } else {
-                    // This shouldn't happen with the new logic, but keeping as fallback
                     Color.gray.opacity(0.3)
                         .frame(width: size.width, height: size.height)
                         .cornerRadius(cornerRadius)
@@ -133,7 +186,7 @@ struct ProfilePhotoGrid: View {
     private func handleNewPhotoSelection() async {
         isUploadingNewPhotos = true
         defer { isUploadingNewPhotos = false }
-        
+
         var newItems: [ImageItem] = []
 
         for item in selectedItems {
@@ -157,7 +210,6 @@ struct ProfilePhotoGrid: View {
             profile.profilePhotoURLs = images.compactMap { $0.url }
         }
 
-        // Upload to server
         if let userID = try? await SupabaseManager.shared.client.auth.session.user.id {
             await SupabasePhotoUploader.shared.uploadUpdatedPhotos(images, for: userID)
         }
@@ -180,7 +232,6 @@ struct ProfilePhotoGrid: View {
 
         draggedIndex = nil
 
-        // Update server in background
         Task.detached {
             guard let userID = try? await SupabaseManager.shared.client.auth.session.user.id else { return }
 
@@ -200,12 +251,4 @@ struct ProfilePhotoGrid: View {
             images[i].isMain = (i == 0)
         }
     }
-}
-
-func imagesHaveChanged(original: [ImageItem], current: [ImageItem]) -> Bool {
-    guard original.count == current.count else { return true }
-    for (a, b) in zip(original, current) {
-        if a != b || a.isMain != b.isMain { return true }
-    }
-    return false
 }

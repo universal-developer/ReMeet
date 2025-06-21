@@ -106,4 +106,8 @@ final class ImageCacheManager {
             print("❌ Failed to clear photo cache: \(error)")
         }
     }
+    
+    func removeFromRAM(forKey key: String) {
+        ramCache.removeObject(forKey: key as NSString)
+    }
 }

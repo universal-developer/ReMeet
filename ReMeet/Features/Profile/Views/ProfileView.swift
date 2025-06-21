@@ -29,7 +29,7 @@ struct ProfileView: View {
                         if isLoading {
                             shimmerPhotoGrid
                         } else {
-                            ProfilePhotoGrid(images: $profile.preloadedProfilePhotos)
+                            ProfilePhotoGrid(images: $profile.preloadedProfilePhotos, showDeleteButtons: false)
                         }
 
                         VStack(alignment: .leading, spacing: 12) {
@@ -89,7 +89,8 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $isShowingEditSheet) {
-                editProfileSheet
+                EditProfileView(images: $profile.preloadedProfilePhotos)
+                    .environmentObject(profile)
             }
         }
     }
@@ -192,11 +193,11 @@ struct ProfileView: View {
         }
     }
     
-    private var editProfileSheet: some View {
+    /*private var editProfileSheet: some View {
         NavigationView {
             Form {
                 Section(header: Text("Photos")) {
-                    EditablePhotoGrid(images: $profile.preloadedProfilePhotos)
+                    ProfilePhotoGrid(images: $profile.preloadedProfilePhotos, showDeleteButtons: true)
                 }
 
                 Section(header: Text("Name")) {
@@ -233,7 +234,7 @@ struct ProfileView: View {
                 }
             }
         }
-    }
+    }*/
 
 }
 
