@@ -161,25 +161,22 @@ struct ProfileView: View {
                     .clipShape(Circle())
             }*/
             
-            Button(action: {
-                isShowingEditSheet = true
-                highlightEditButton = false
-            }) {
-                Image(systemName: "pencil")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(10)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color(hex: "C9155A"), lineWidth: highlightEditButton ? 2 : 0)
-                            .scaleEffect(highlightEditButton ? 1.2 : 1.0)
-                            .opacity(highlightEditButton ? 1.0 : 0)
-                            .animation(.easeInOut(duration: 1.2).repeatCount(3, autoreverses: true), value: highlightEditButton)
-                    )
-            }
-
+            CircularIconButton(
+                systemName: "pencil",
+                action: {
+                    isShowingEditSheet = true
+                    highlightEditButton = false
+                },
+                size: 22,
+                iconSize: 18,
+            )
+            .overlay(
+                Circle()
+                    .stroke(Color(hex: "C9155A"), lineWidth: highlightEditButton ? 2 : 0)
+                    .scaleEffect(highlightEditButton ? 1.2 : 1.0)
+                    .opacity(highlightEditButton ? 1.0 : 0)
+                    .animation(.easeInOut(duration: 1.2).repeatCount(3, autoreverses: true), value: highlightEditButton)
+            )
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
