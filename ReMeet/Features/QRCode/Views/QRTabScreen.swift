@@ -206,9 +206,8 @@ struct QRTabScreen: View {
             }
         }
         .sheet(isPresented: $showFriends) {
-            Text("Friends screen placeholder")
-                .font(.title2)
-                .padding()
+            FriendsListView()
+                .environmentObject(profile)
         }
     }
     private func generateMyQRCode(forceRefresh: Bool = false) {

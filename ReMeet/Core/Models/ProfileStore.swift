@@ -25,6 +25,11 @@ final class ProfileStore: ObservableObject {
     @Published var hasLoadedOnce: Bool = false
     @Published var isLoading: Bool = false
 
+    
+    // MARK: - Friends
+    @Published var friends: [MinimalUser] = []
+    
+    
     private init() {}
 
     // MARK: - Load all user data
@@ -219,6 +224,86 @@ final class ProfileStore: ObservableObject {
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         _ = try await URLSession.shared.data(for: request)
     }
+    
+    func loadFriends() async {
+        do {
+            let fetchedFriends = try await self.fetchFriends()
+            await MainActor.run {
+                self.friends = fetchedFriends
+            }
+        } catch {
+            print("❌ Failed to load friends: \(error.localizedDescription)")
+            await MainActor.run {
+                self.friends = []
+            }
+        }
+    }
+
+
+    
+    func fetchFriends() async throws -> [ProfileStore.MinimalUser] {
+        let session = try await SupabaseManager.shared.client.auth.session
+        let myId = session.user.id.uuidString
+
+        // Fetch from view (or table)
+        let results = try await SupabaseManager.shared.client
+            .from("friends_with_metadata") // use "friends" if no view
+            .select("id, first_name, photo_url")
+            .eq("user_id", value: myId)
+            .execute()
+
+        guard let raw = try? JSONSerialization.jsonObject(with: results.data) as? [[String: Any]] else {
+            return []
+        }
+
+        var users: [MinimalUser] = []
+
+        for entry in raw {
+            guard let id = entry["id"] as? String,
+                  let firstName = entry["first_name"] as? String else {
+                continue
+            }
+
+            var image: UIImage? = nil
+
+            // Try photo_url directly from view first
+            if let urlStr = entry["photo_url"] as? String,
+               let url = URL(string: urlStr) {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    image = UIImage(data: data)
+                } catch {
+                    print("❌ Failed to load photo_url from view for \(firstName): \(error)")
+                }
+            } else {
+                // Fallback: fetch main photo manually from user_photos
+                do {
+                    let photoQuery = try await SupabaseManager.shared.client
+                        .from("user_photos")
+                        .select("url")
+                        .eq("user_id", value: id)
+                        .eq("is_main", value: true)
+                        .limit(1)
+                        .execute()
+                    
+                    if let photoArray = try? JSONSerialization.jsonObject(with: photoQuery.data) as? [[String: Any]],
+                       let urlStr = photoArray.first?["url"] as? String,
+                       let url = URL(string: urlStr) {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        image = UIImage(data: data)
+                    }
+                } catch {
+                    print("❌ Failed fallback photo fetch for \(firstName): \(error)")
+                }
+            }
+
+            users.append(.init(id: id, firstName: firstName, image: image))
+        }
+
+        return users
+    }
+
+
 
     // MARK: - Models
     struct UserProfile: Decodable {
