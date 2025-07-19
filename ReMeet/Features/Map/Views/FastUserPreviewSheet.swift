@@ -129,12 +129,3 @@ private struct ImageView: View {
     }
 }
 
-
-private struct UserProfile: Decodable {
-    let first_name: String
-}
-
-private struct UserPhoto: Decodable {
-    let url: String
-}
-
