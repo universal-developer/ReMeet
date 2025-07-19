@@ -35,17 +35,26 @@ struct ProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(profileNameAndAge)
                                 .font(.title)
-                                .fontWeight(.bold)
+                                    .fontWeight(.bold)
                             
                             /*Text("Photos loaded: \(profile.preloadedProfilePhotos.count)")
                              .font(.caption)*/
                             if let city = profile.city, !city.isEmpty {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "mappin.and.ellipse")
+                                HStack(spacing: 6) {
+                                    Image("tab_map")
+                                        .resizable()
+                                        .renderingMode(.template)
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 16, height: 16)
+
                                     Text(city)
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.black)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,9 +83,14 @@ struct ProfileView: View {
                     profile.userImage = main
                 }
                 
-                if profile.city == nil || profile.city?.isEmpty == true {
+                if profile.city == nil || profile.city?.isEmpty == true || profile.firstName?.isEmpty == true || profile.age == nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         highlightEditButton = true
+
+                        // Open sheet after short delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            isShowingEditSheet = true
+                        }
                     }
                 }
             }
@@ -89,7 +103,10 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $isShowingEditSheet) {
-                EditProfileView(images: $profile.preloadedProfilePhotos)
+                EditProfileView(
+                        images: $profile.preloadedProfilePhotos,
+                        highlightedField: profile.missingRequiredField()
+                    )
                     .environmentObject(profile)
             }
         }

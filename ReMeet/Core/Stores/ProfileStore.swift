@@ -45,6 +45,7 @@ final class ProfileStore: ObservableObject {
 
             self.firstName = profile?.first_name
             self.age = profile?.age
+            self.city = profile?.city
             self.profilePhotoURLs = allPhotos.map { $0.url }
 
             var images: [ImageItem] = []
@@ -113,6 +114,30 @@ final class ProfileStore: ObservableObject {
             print("❌ Failed to refresh photos: \(error)")
         }
     }
+    
+    func updateCity(to newCity: String) async {
+        guard let userId = userId else { return }
+        self.city = newCity
+
+        do {
+            try await SupabaseManager.shared.client
+                .from("profiles")
+                .update(["city": newCity])
+                .eq("id", value: userId)
+                .execute()
+        } catch {
+            print("❌ Failed to update city in Supabase: \(error)")
+        }
+    }
+    
+    func missingRequiredField() -> ProfileField? {
+        if firstName?.isEmpty != false { return .name }
+        if age == nil { return .age }
+        if city?.isEmpty != false { return .city }
+        return nil
+    }
+
+
 
     // MARK: - Minimal user info (used on map, QR, etc)
     func fetchMinimalUser(userId: String) async -> MinimalUser? {

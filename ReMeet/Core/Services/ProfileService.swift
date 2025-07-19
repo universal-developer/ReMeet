@@ -11,7 +11,7 @@ struct ProfileService {
     static func getCurrentProfileAndPhotos(userId: String) async throws -> (UserProfile?, [UserPhoto]) {
         let profile: [UserProfile] = try await SupabaseManager.shared.client
             .from("profiles")
-            .select("first_name, age")
+            .select("first_name, age, city")
             .eq("id", value: userId)
             .limit(1)
             .execute()

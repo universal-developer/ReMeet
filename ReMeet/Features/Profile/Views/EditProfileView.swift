@@ -11,6 +11,7 @@ struct EditProfileView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var profile: ProfileStore
     @Binding var images: [ImageItem]
+    var highlightedField: ProfileField?
 
     @State private var hasChanges = false
 
